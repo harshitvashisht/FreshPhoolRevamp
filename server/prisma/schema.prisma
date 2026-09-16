@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum ProductCategory {
+  STEM
+  PUJA
+  GARLAND
+  PACK
+}
+
+enum DeliveryWindow {
+  puja
+  decorative
+}
+
+enum OrderKind {
+  one_time
+  subscription
+  mixed
+}
+
+enum OrderStatus {
+  payment_pending
+  payment_received
+  being_prepared
+  out_for_delivery
+  delivered
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  confirmed
+  failed
+}
+
+enum RecurringStatus {
+  pending_payment
+  active
+  paused
+  cancelled
+}
+
+enum Cadence {
+  one_time
+  daily
+  weekly
+  monthly
+}
+
+enum Offering {
+  custom
+  puja_pack
+  garland
+  stem
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phoneE164    String?  @unique
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  member       Member?
+
+  @@map("users")
+}
+
+model Member {
+  id          String           @id @default(uuid())
+  userId      String           @unique
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneE164   String
+  name        String
+  email       String?
+  createdAt   DateTime         @default(now())
+  addresses   Address[]
+  orders      Order[]
+  recurring   RecurringOrder[]
+
+  @@map("members")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  community String
+  blockFlat String
+  pincode   String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  orders    Order[]
+
+  @@index([memberId])
+  @@map("addresses")
+}
+
+model Product {
+  id         String          @id @default(uuid())
+  slug       String          @unique
+  name       String
+  category   ProductCategory
+  unit       String
+  priceRupee Int?
+  imageUrl   String?
+  active     Boolean         @default(true)
+  sortOrder  Int             @default(0)
+  variants   ProductVariant[]
+  lines      OrderLine[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id           String  @id @default(uuid())
+  productId    String
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size         String?
+  durationDays Int?
+  cadence      Cadence @default(daily)
+  priceRupee   Int
+  label        String
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model DeliveryZone {
+  id        String  @id @default(uuid())
+  pincode   String  @unique
+  locality  String
+  active    Boolean @default(true)
+  notes     String?
+
+  @@map("delivery_zones")
+}
+
+model Order {
+  id              String          @id @default(uuid())
+  orderNumber     String          @unique
+  memberId        String?
+  member          Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  addressId       String?
+  address         Address?        @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  community       String
+  blockFlat       String
+  kind            OrderKind
+  deliveryWindow  DeliveryWindow
+  status          OrderStatus     @default(payment_pending)
+  subtotalRupee   Int
+  notes           String?
+  items           Json
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  lines           OrderLine[]
+  payments        Payment[]
+  recurring       RecurringOrder[]
+
+  @@index([memberId])
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model OrderLine {
+  id            String   @id @default(uuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name          String
+  qty           Int
+  unit          String
+  unitPrice     Int
+  lineTotal     Int
+  cadence       Cadence  @default(one_time)
+  durationDays  Int      @default(1)
+  offering      Offering @default(custom)
+  size          String?
+
+  @@index([orderId])
+  @@map("order_lines")
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amountRupee Int
+  status      PaymentStatus @default(pending)
+  provider    String        @default("razorpay_stub")
+  providerRef String?
+  createdAt   DateTime      @default(now())
+  confirmedAt DateTime?
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model RecurringOrder {
+  id                   String          @id @default(uuid())
+  subscriptionNumber   String          @unique
+  memberId             String?
+  member               Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  sourceOrderId        String?
+  sourceOrder          Order?          @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  offering             Offering
+  name                 String
+  size                 String?
+  qty                  Int             @default(1)
+  durationDays         Int
+  cadence              Cadence
+  prepaidAmountRupee   Int
+  community            String
+  blockFlat            String
+  status               RecurringStatus @default(pending_payment)
+  periodStart          DateTime
+  periodEnd            DateTime
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([memberId])
+  @@index([status])
+  @@map("recurring_orders")
+}
