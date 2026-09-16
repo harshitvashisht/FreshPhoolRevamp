@@ -51,7 +51,7 @@ const zones = [
 
 async function main() {
   const adminEmail = (process.env.ADMIN_EMAIL || "admin@freshphool.com").toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || "change-me-admin-password";
+  const adminPassword = process.env.ADMIN_PASSWORD || "freshPhool@Vivek";
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   await prisma.user.upsert({
