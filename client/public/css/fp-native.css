@@ -1,0 +1,24 @@
+/* Native WebView safe areas. env() is 0 on desktop, so Hostinger layout is unchanged. */
+body{
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.dev-banner,
+.preview-banner{
+  padding-top: calc(9px + env(safe-area-inset-top, 0px));
+}
+header{
+  top: calc(38px + env(safe-area-inset-top, 0px));
+}
+@media (max-width: 860px){
+  header{
+    top: calc(36px + env(safe-area-inset-top, 0px));
+  }
+}
+body:not(:has(.dev-banner, .preview-banner)){
+  padding-top: env(safe-area-inset-top, 0px);
+}
+html.fp-native body{
+  overscroll-behavior: none;
+}

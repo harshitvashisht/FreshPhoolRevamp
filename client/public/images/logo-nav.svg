@@ -1,0 +1,16 @@
+<svg width="440" height="110" viewBox="0 0 440 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FreshPhool">
+  <!-- Horizontal nav mark with padded viewBox so petals are not clipped -->
+  <g transform="translate(58,55) scale(0.72)">
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(0)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="16" fill="#FAC775"/>
+    <circle cx="0" cy="0" r="8" fill="#EF9F27"/>
+  </g>
+  <text x="108" y="68" font-family="Georgia, 'Times New Roman', serif" font-size="44"
+        font-weight="700" fill="#C2185B" letter-spacing="-0.5">Fresh</text>
+  <text x="238" y="68" font-family="Georgia, 'Times New Roman', serif" font-size="44"
+        font-weight="400" font-style="italic" fill="#880E4F" letter-spacing="-0.5">Phool</text>
+</svg>

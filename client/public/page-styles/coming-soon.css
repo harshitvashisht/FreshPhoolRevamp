@@ -1,0 +1,29 @@
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:#FFFBF2;
+    color:#1F2E23;
+    font-family:'Inter',sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:32px;
+  }
+  .box{max-width:420px}
+  img{height:72px;width:auto;margin:0 auto 28px;display:block}
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:clamp(28px,5vw,36px);
+    margin:0 0 12px;
+    letter-spacing:-0.02em;
+  }
+  p{
+    margin:0;
+    font-size:16px;
+    color:#3F4F41;
+    line-height:1.5;
+  }
+

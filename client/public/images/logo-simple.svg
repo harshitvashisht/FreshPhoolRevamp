@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FreshPhool icon">
+  <!-- Icon-only mark for favicons and small UI -->
+  <g transform="translate(64,68)">
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(0)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="16" fill="#FAC775"/>
+    <circle cx="0" cy="0" r="8" fill="#EF9F27"/>
+  </g>
+</svg>

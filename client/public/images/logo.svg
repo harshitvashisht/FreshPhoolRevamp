@@ -1,0 +1,25 @@
+<svg width="560" height="240" viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg">
+  <!-- FreshPhool Primary Logo — Pink petals, yellow centre, serif wordmark -->
+  <!-- Petal rosette -->
+  <g transform="translate(96,120)">
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(0)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(288)"/>
+    <!-- Yellow centre -->
+    <circle cx="0" cy="0" r="16" fill="#FAC775"/>
+    <circle cx="0" cy="0" r="8" fill="#EF9F27"/>
+  </g>
+  <!-- Wordmark: Fresh -->
+  <text x="172" y="92" font-family="Georgia, serif" font-size="72"
+        font-weight="700" fill="#C2185B" letter-spacing="-1">Fresh</text>
+  <!-- Wordmark: Phool -->
+  <text x="172" y="164" font-family="Georgia, serif" font-size="72"
+        font-weight="400" fill="#880E4F" font-style="italic" letter-spacing="-1">Phool</text>
+  <!-- Divider rule -->
+  <line x1="172" y1="178" x2="548" y2="178" stroke="#F4C0D1" stroke-width="2"/>
+  <!-- Sub-tagline -->
+  <text x="172" y="204" font-family="Arial, sans-serif" font-size="18"
+        fill="#D4537E" letter-spacing="5">BENGALURU · DAILY FLOWERS</text>
+</svg>
