@@ -54,3 +54,92 @@ adminRouter.get(
     res.json({ dataset: query.dataset, from: query.from, to: query.to, rows });
   }),
 );
+
+adminRouter.get(
+  "/members",
+  asyncHandler(async (_req, res) => {
+    res.json(await admin.listMembers());
+  }),
+);
+
+adminRouter.get(
+  "/products",
+  asyncHandler(async (_req, res) => {
+    res.json(await admin.listAllProducts());
+  }),
+);
+
+adminRouter.post(
+  "/products",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        slug: z.string().min(1),
+        name: z.string().min(1),
+        category: z.enum(["STEM", "PUJA", "GARLAND", "PACK"]),
+        unit: z.string().min(1),
+        priceRupee: z.number().int().nullable().optional(),
+        imageUrl: z.string().nullable().optional(),
+        active: z.boolean().optional(),
+        sortOrder: z.number().int().optional(),
+      })
+      .parse(req.body);
+    res.status(201).json(await admin.upsertProduct(body));
+  }),
+);
+
+adminRouter.patch(
+  "/products/:id",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        slug: z.string().min(1),
+        name: z.string().min(1),
+        category: z.enum(["STEM", "PUJA", "GARLAND", "PACK"]),
+        unit: z.string().min(1),
+        priceRupee: z.number().int().nullable().optional(),
+        imageUrl: z.string().nullable().optional(),
+        active: z.boolean().optional(),
+        sortOrder: z.number().int().optional(),
+      })
+      .parse(req.body);
+    res.json(await admin.upsertProduct({ id: req.params.id, ...body }));
+  }),
+);
+
+adminRouter.get(
+  "/zones",
+  asyncHandler(async (_req, res) => {
+    res.json(await admin.listAllZones());
+  }),
+);
+
+adminRouter.post(
+  "/zones",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        pincode: z.string().min(6),
+        locality: z.string().min(1),
+        active: z.boolean().optional(),
+        notes: z.string().nullable().optional(),
+      })
+      .parse(req.body);
+    res.status(201).json(await admin.upsertZone(body));
+  }),
+);
+
+adminRouter.patch(
+  "/zones/:id",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        pincode: z.string().min(6),
+        locality: z.string().min(1),
+        active: z.boolean().optional(),
+        notes: z.string().nullable().optional(),
+      })
+      .parse(req.body);
+    res.json(await admin.upsertZone({ id: req.params.id, ...body }));
+  }),
+);

@@ -192,3 +192,95 @@ export async function exportRows(dataset: string, from: Date, to: Date) {
   throw new HttpError(400, "Unknown dataset");
 }
 
+export async function listMembers() {
+  return prisma.member.findMany({
+    include: {
+      user: { select: { email: true, role: true, createdAt: true } },
+      addresses: true,
+      _count: { select: { orders: true, recurring: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function upsertProduct(input: {
+  id?: string;
+  slug: string;
+  name: string;
+  category: "STEM" | "PUJA" | "GARLAND" | "PACK";
+  unit: string;
+  priceRupee?: number | null;
+  imageUrl?: string | null;
+  active?: boolean;
+  sortOrder?: number;
+}) {
+  if (input.id) {
+    return prisma.product.update({
+      where: { id: input.id },
+      data: {
+        slug: input.slug,
+        name: input.name,
+        category: input.category,
+        unit: input.unit,
+        priceRupee: input.priceRupee ?? null,
+        imageUrl: input.imageUrl ?? null,
+        active: input.active ?? true,
+        sortOrder: input.sortOrder ?? 0,
+      },
+      include: { variants: true },
+    });
+  }
+  return prisma.product.create({
+    data: {
+      slug: input.slug,
+      name: input.name,
+      category: input.category,
+      unit: input.unit,
+      priceRupee: input.priceRupee ?? null,
+      imageUrl: input.imageUrl ?? null,
+      active: input.active ?? true,
+      sortOrder: input.sortOrder ?? 0,
+    },
+    include: { variants: true },
+  });
+}
+
+export async function listAllProducts() {
+  return prisma.product.findMany({
+    include: { variants: true },
+    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+  });
+}
+
+export async function listAllZones() {
+  return prisma.deliveryZone.findMany({ orderBy: { pincode: "asc" } });
+}
+
+export async function upsertZone(input: {
+  id?: string;
+  pincode: string;
+  locality: string;
+  active?: boolean;
+  notes?: string | null;
+}) {
+  if (input.id) {
+    return prisma.deliveryZone.update({
+      where: { id: input.id },
+      data: {
+        pincode: input.pincode,
+        locality: input.locality,
+        active: input.active ?? true,
+        notes: input.notes ?? null,
+      },
+    });
+  }
+  return prisma.deliveryZone.create({
+    data: {
+      pincode: input.pincode,
+      locality: input.locality,
+      active: input.active ?? true,
+      notes: input.notes ?? null,
+    },
+  });
+}
+

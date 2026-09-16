@@ -4,8 +4,11 @@ import DailyFlowersPage from "./components/pages/DailyFlowers";
 import DeliveryPage from "./components/pages/Delivery";
 import GarlandsPage from "./components/pages/Garlands";
 import IndexPage from "./components/pages/Index";
-import AdminIndexPage from "./components/pages/AdminIndex";
+import AdminDashboardPage from "./components/pages/AdminDashboard";
+import LoginPage from "./components/pages/LoginPage";
 import PayIndexPage from "./components/pages/PayIndex";
+import RegisterPage from "./components/pages/RegisterPage";
+import UserDashboardPage from "./components/pages/UserDashboard";
 import JourneyPage from "./components/pages/Journey";
 import LookAPage from "./components/pages/LookA";
 import LookBPage from "./components/pages/LookB";
@@ -44,8 +47,36 @@ function pageExtraScripts(path: string): string[] {
 
 export default function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
+  const isAppShell =
+    path === "/login" ||
+    path === "/register" ||
+    path === "/dashboard" ||
+    path.startsWith("/dashboard/") ||
+    path === "/admin" ||
+    path.startsWith("/admin/");
 
-  useEffect(() => loadLegacyRuntime(pageExtraCss(path), pageExtraScripts(path)), [path]);
+  useEffect(() => {
+    if (isAppShell) {
+      const fonts = [
+        "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap",
+      ];
+      const css = ["/page-styles/dashboard.css"];
+      const links = [...fonts, ...css].map((href) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = href;
+        document.head.appendChild(link);
+        return link;
+      });
+      return () => links.forEach((l) => l.remove());
+    }
+    return loadLegacyRuntime(pageExtraCss(path), pageExtraScripts(path));
+  }, [path, isAppShell]);
+
+  if (path === "/login") return <LoginPage />;
+  if (path === "/register") return <RegisterPage />;
+  if (path === "/dashboard" || path.startsWith("/dashboard/")) return <UserDashboardPage />;
+  if (path === "/admin" || path.startsWith("/admin/")) return <AdminDashboardPage />;
 
   if (path === "/coming-soon.html" || path === "/coming-soon" ) return <ComingSoonPage />;
   if (path === "/daily-flowers.html" || path === "/daily-flowers" ) return <DailyFlowersPage />;
@@ -59,7 +90,6 @@ export default function App() {
   if (path === "/looks.html" || path === "/looks" ) return <LooksPage />;
   if (path === "/north-bangalore.html" || path === "/north-bangalore" ) return <NorthBangalorePage />;
   if (path === "/puja.html" || path === "/puja" ) return <PujaPage />;
-  if (path === "/admin/index.html" || path === "/admin") return <AdminIndexPage />;
   if (path === "/pay/index.html" || path === "/pay") return <PayIndexPage />;
   return <IndexPage />;
 }

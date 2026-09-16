@@ -5,6 +5,7 @@ import { authRouter } from "./auth.js";
 import { catalogRouter } from "./catalog.js";
 import { ordersRouter } from "./orders.js";
 import { adminRouter } from "./admin.js";
+import { memberRouter } from "./member.js";
 
 export const router = Router();
 
@@ -19,4 +20,5 @@ router.get(
 router.use("/auth", authRouter);
 router.use("/catalog", catalogRouter);
 router.use("/orders", ordersRouter);
+router.use("/me", memberRouter);
 router.use("/admin", adminRouter);

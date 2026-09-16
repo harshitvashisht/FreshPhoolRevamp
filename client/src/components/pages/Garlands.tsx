@@ -32,6 +32,7 @@ export function GarlandsHeader2() {
             <input type="text" id="navSearch" name="fp-flower-q" placeholder="Search your Flowers" aria-label="Search your Flowers" inputMode="search" autocomplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" readOnly={true} onFocus={(event) => runInlineHandler(event, "this.removeAttribute('readonly')")} onInput={(event) => runInlineHandler(event, "fpNav.search(this.value)")} onKeyDown={(event) => runInlineHandler(event, "if(event.key==='Enter')fpNav.searchEnter()")} />
           </div>
           <button type="button" className="member-login-btn" id="memberLoginBtn" onClick={(event) => runInlineHandler(event, "fpMember.open()")}>Member</button>
+          <a className="member-login-btn" href="/dashboard" style={{ textDecoration: "none" }}>Dashboard</a>
           <button type="button" className="member-chip" id="memberChip" onClick={(event) => runInlineHandler(event, "fpMember.logout()")} title="Log out"></button>
           <button className="nav-cart-btn" onClick={(event) => runInlineHandler(event, "fpCart.openPanel()")} aria-label="View order">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

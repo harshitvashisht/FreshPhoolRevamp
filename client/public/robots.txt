@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /pay/
-Disallow: /look-b.html
-Disallow: /look-c.html
-# /journey.html is an investor briefing (noindex); keep it off the sitemap.
-Sitemap: https://saddlebrown-wildcat-196700.hostingersite.com/sitemap.xml
