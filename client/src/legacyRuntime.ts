@@ -13,7 +13,7 @@ const SCRIPTS = [
   "/js/vendor/capacitor.js",
   "/js/fp-native.js?v=20260912g",
   "/js/flower-lore.js?v=20260912g",
-  "/js/fp-looks.js?v=20260912g",
+  "/js/fp-looks.js?v=20260917a",
 ];
 
 export function loadLegacyRuntime(extraCss: string[] = [], extraScripts: string[] = []): () => void {

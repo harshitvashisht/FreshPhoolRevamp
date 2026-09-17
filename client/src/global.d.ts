@@ -1,7 +1,6 @@
 declare global {
   interface Window {
     fpCart: any;
-    fpMember: any;
     fpNav: any;
     fpNative: any;
     fpPincode: any;
@@ -9,4 +8,11 @@ declare global {
     fpLooks: any;
   }
 }
+
+declare module "react" {
+  interface InputHTMLAttributes<T> {
+    autocomplete?: string;
+  }
+}
+
 export {};

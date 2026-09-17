@@ -31,9 +31,9 @@ export function IndexHeader2() {
           <div className="nav-search" id="navSearchWrap" role="search">
             <input type="text" id="navSearch" name="fp-flower-q" placeholder="Search your Flowers" aria-label="Search your Flowers" inputMode="search" autocomplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" readOnly={true} onFocus={(event) => runInlineHandler(event, "this.removeAttribute('readonly')")} onInput={(event) => runInlineHandler(event, "fpNav.search(this.value)")} onKeyDown={(event) => runInlineHandler(event, "if(event.key==='Enter')fpNav.searchEnter()")} />
           </div>
-          <button type="button" className="member-login-btn" id="memberLoginBtn" onClick={(event) => runInlineHandler(event, "fpMember.open()")}>Member</button>
+
           <a className="member-login-btn" href="/dashboard" style={{ textDecoration: "none" }}>Dashboard</a>
-          <button type="button" className="member-chip" id="memberChip" onClick={(event) => runInlineHandler(event, "fpMember.logout()")} title="Log out"></button>
+          <a className="member-login-btn" href="/login" style={{ textDecoration: "none" }}>Sign in</a>
           <button className="nav-cart-btn" onClick={(event) => runInlineHandler(event, "fpCart.openPanel()")} aria-label="View order">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="9" cy="21" r="1"></circle>
@@ -1307,7 +1307,7 @@ export function IndexCoverage10() {
            page — if yours is not there, WhatsApp us and we will confirm.
         </p>
         <form id="pinForm" className="pin-form">
-          <input id="pinInput" name="pincode" inputMode="numeric" maxLength="6" autocomplete="postal-code" placeholder="560064" aria-label="Pincode" />
+          <input id="pinInput" name="pincode" inputMode="numeric" maxLength={6} autocomplete="postal-code" placeholder="560064" aria-label="Pincode" />
           <button type="submit" className="btn btn-primary" aria-label="Check delivery on WhatsApp">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.3-.6-.4z"></path>
@@ -1615,7 +1615,6 @@ export default function IndexPage() {
       <IndexNavDrawer14 />
       <IndexCartBar15 />
       <IndexCartOverlay16 />
-      <IndexMemberModal17 />
       <IndexCartPanel18 />
       <IndexScript19 />
       <IndexScript20 />

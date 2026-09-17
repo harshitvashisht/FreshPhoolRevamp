@@ -7,9 +7,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const next = new URLSearchParams(window.location.search).get("next");
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
 
   if (!loading && role) {
-    window.location.replace(homeFor(role));
+    window.location.replace(safeNext || homeFor(role));
     return null;
   }
 
@@ -19,7 +21,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const profile = await login(email, password);
-      window.location.href = homeFor(profile.role);
+      window.location.href = safeNext || homeFor(profile.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");
     } finally {
@@ -34,7 +36,7 @@ export default function LoginPage() {
           FreshPhool
         </p>
         <h1 style={{ marginTop: 8 }}>Sign in</h1>
-        <p className="fp-muted">Members go to the user dashboard. Ops accounts open the admin board.</p>
+        <p className="fp-muted">Sign in to continue to checkout or open your dashboard.</p>
         <form onSubmit={onSubmit}>
           <label htmlFor="email">Email</label>
           <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -54,7 +56,7 @@ export default function LoginPage() {
           {error ? <p className="fp-err">{error}</p> : null}
         </form>
         <p className="fp-muted" style={{ marginTop: 18 }}>
-          New here? <a href="/register">Create a member account</a>
+          New here? <a href={safeNext ? `/register?next=${encodeURIComponent(safeNext)}` : "/register"}>Create a member account</a>
         </p>
       </div>
     </main>

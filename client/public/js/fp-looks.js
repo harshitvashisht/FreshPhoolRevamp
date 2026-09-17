@@ -5,218 +5,9 @@ const PUJA_PACK = {
     Large:  {7: 249, 30: 1099, 90: 2999}
   };
 
-  const FP = {
-    url: 'https://fslgbwidmkaxjcizapoc.supabase.co',
-    anon: 'sb_publishable_Cqd-qBST0IajFZ6pbvDalA_nsTzlzDk'
-  };
-
-  function restHeaders(token, prefer){
-    const t = token || FP.anon;
-    return {
-      apikey: FP.anon,
-      Authorization: 'Bearer ' + t,
-      'Content-Type': 'application/json',
-      Prefer: prefer || 'return=minimal'
-    };
+  function getAccessToken(){
+    return localStorage.getItem('fp.accessToken');
   }
-
-  function normalizePhone(raw){
-    const d = String(raw || '').replace(/\D/g, '');
-    if(d.length === 10) return '91' + d;
-    if(d.length === 12 && d.startsWith('91')) return d;
-    if(d.length === 11 && d.startsWith('0')) return '91' + d.slice(1);
-    return null;
-  }
-
-  function validEmail(e){
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
-  }
-
-  const fpMember = {
-    sessionKey: 'fp_member',
-    pendingCheckout: false,
-    mode: 'login',
-    getSession(){
-      try { return JSON.parse(localStorage.getItem(this.sessionKey) || 'null'); }
-      catch(e){ return null; }
-    },
-    saveSession(s){ localStorage.setItem(this.sessionKey, JSON.stringify(s)); this.paint(); },
-    clearSession(){ localStorage.removeItem(this.sessionKey); this.paint(); },
-    paint(){
-      const s = this.getSession();
-      const btn = document.getElementById('memberLoginBtn');
-      const chip = document.getElementById('memberChip');
-      if(!btn || !chip) return;
-      if(s && s.access_token){
-        btn.style.display = 'none';
-        chip.classList.add('show');
-        chip.textContent = (s.name || s.email || s.phone || 'Member') + ' · Log out';
-      } else {
-        btn.style.display = '';
-        chip.classList.remove('show');
-        chip.textContent = '';
-      }
-    },
-    open(hint){
-      const el = document.getElementById('memberModal');
-      if(!el) return;
-      el.classList.add('open');
-      el.setAttribute('aria-hidden', 'false');
-      if(hint) document.getElementById('memberModalHint').textContent = hint;
-      this.setMode(this.mode || 'login');
-      document.getElementById('memberErr').textContent = '';
-      document.getElementById('memberAuthFields').style.display = '';
-      document.getElementById('memberTabs').style.display = '';
-    },
-    close(){
-      const el = document.getElementById('memberModal');
-      if(!el) return;
-      el.classList.remove('open');
-      el.setAttribute('aria-hidden', 'true');
-    },
-    setMode(mode){
-      this.mode = mode;
-      const box = document.querySelector('.member-modal');
-      if(!box) return;
-      box.classList.toggle('mode-register', mode === 'register');
-      box.classList.toggle('mode-login', mode === 'login');
-      box.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-      document.getElementById('memberModalTitle').textContent = mode === 'register' ? 'Create member account' : 'Member Login';
-      document.getElementById('memberSubmitBtn').textContent = mode === 'register' ? 'Register & continue' : 'Log in';
-      const phoneLabel = document.querySelector('label[for="memberPhone"]');
-      if(phoneLabel) phoneLabel.textContent = mode === 'register' ? 'Phone (India)' : 'Phone (India, optional)';
-    },
-    logout(){ this.clearSession(); },
-
-    async upsertMember(tok, {user_id, email, phone, name}){
-      const memberRow = {
-        auth_user_id: user_id,
-        phone_e164: phone ? ('+' + phone) : null,
-        name: name || email,
-        email: email || null
-      };
-      // phone_e164 is NOT NULL in schema historically — require phone for register
-      const up = await fetch(FP.url + '/rest/v1/dim_members?on_conflict=auth_user_id', {
-        method: 'POST',
-        headers: restHeaders(tok.access_token, 'return=representation,resolution=merge-duplicates'),
-        body: JSON.stringify(memberRow)
-      });
-      let memberSk = null;
-      if(up.ok){
-        const rows = await up.json();
-        if(rows && rows[0]) memberSk = rows[0].member_sk;
-      } else {
-        const sel = await fetch(FP.url + '/rest/v1/dim_members?auth_user_id=eq.' + user_id + '&select=member_sk,phone_e164,email,name', {
-          headers: restHeaders(tok.access_token, 'return=representation')
-        });
-        if(sel.ok){
-          const rows = await sel.json();
-          if(rows && rows[0]) memberSk = rows[0].member_sk;
-        } else {
-          const errText = await up.text();
-          throw new Error(errText || 'Could not save member profile');
-        }
-      }
-      return memberSk;
-    },
-
-    async submit(){
-      const err = document.getElementById('memberErr');
-      err.textContent = '';
-      const email = (document.getElementById('memberEmail').value || '').trim().toLowerCase();
-      const pass = document.getElementById('memberPass').value || '';
-      const name = (document.getElementById('memberName').value || '').trim();
-      const phoneRaw = document.getElementById('memberPhone').value;
-      const phone = normalizePhone(phoneRaw);
-      if(!validEmail(email)){ err.textContent = 'Enter a valid email address.'; return; }
-      if(pass.length < 6){ err.textContent = 'Password must be at least 6 characters.'; return; }
-      if(this.mode === 'register'){
-        if(name.length < 2){ err.textContent = 'Please enter your name.'; return; }
-        if(!phone){ err.textContent = 'Enter a valid 10-digit Indian mobile number.'; return; }
-      }
-      try {
-        let tok = null;
-        if(this.mode === 'register'){
-          const res = await fetch(FP.url + '/auth/v1/signup', {
-            method: 'POST',
-            headers: { apikey: FP.anon, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email, password: pass,
-              data: { phone_e164: '+' + phone, name, role: 'member' }
-            })
-          });
-          const data = await res.json().catch(() => ({}));
-          const msg = String(data.error_description || data.msg || data.error || data.message || '');
-          const alreadyRegistered = /already|registered|exists/i.test(msg);
-          if(res.ok && data.session && data.session.access_token){
-            tok = Object.assign({}, data.session, { user: data.user || data.session.user });
-          } else if(res.ok && data.access_token){
-            tok = data;
-          } else if(!res.ok && !alreadyRegistered){
-            throw new Error(msg || 'Could not register');
-          }
-        }
-        if(!tok){
-          const login = await fetch(FP.url + '/auth/v1/token?grant_type=password', {
-            method: 'POST',
-            headers: { apikey: FP.anon, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password: pass })
-          });
-          tok = await login.json();
-          if(!login.ok){
-            const fail = String(tok.error_description || tok.msg || tok.error || '');
-            if(/not confirmed/i.test(fail)){
-              throw new Error('This email is already registered. Use Login, or wait a moment and try again.');
-            }
-            throw new Error(fail || 'Login failed');
-          }
-        }
-        const user = tok.user || {};
-        const displayName = name || (user.user_metadata && user.user_metadata.name) || email;
-        let metaPhone = user.user_metadata && String(user.user_metadata.phone_e164 || '').replace(/\D/g,'');
-        if(metaPhone && metaPhone.length === 10) metaPhone = '91' + metaPhone;
-        let usePhone = phone || metaPhone || null;
-        let memberSk = null;
-        if(usePhone){
-          memberSk = await this.upsertMember(tok, {
-            user_id: user.id, email, phone: usePhone, name: displayName
-          });
-        } else {
-          const sel = await fetch(FP.url + '/rest/v1/dim_members?auth_user_id=eq.' + user.id + '&select=member_sk,phone_e164,name,email', {
-            headers: restHeaders(tok.access_token, 'return=representation')
-          });
-          if(sel.ok){
-            const rows = await sel.json();
-            if(rows && rows[0]){
-              memberSk = rows[0].member_sk;
-              if(rows[0].phone_e164) usePhone = String(rows[0].phone_e164).replace(/\D/g,'');
-            }
-          }
-          if(!memberSk){
-            err.textContent = 'Enter your Indian mobile number to finish the Member profile.';
-            return;
-          }
-        }
-        this.saveSession({
-          access_token: tok.access_token,
-          refresh_token: tok.refresh_token,
-          user_id: user.id,
-          member_sk: memberSk,
-          phone: usePhone ? ('+' + String(usePhone).replace(/^\+/, '')) : null,
-          name: displayName,
-          email
-        });
-        this.close();
-        if(this.pendingCheckout){
-          this.pendingCheckout = false;
-          fpCart.placeOrder();
-        }
-      } catch (e) {
-        err.textContent = e.message || String(e);
-      }
-    }
-  };
-  fpMember.paint();
 
   const fpCart = {
     items: {},
@@ -434,10 +225,10 @@ const PUJA_PACK = {
     async placeOrder(){
       const items = Object.values(this.items);
       if(items.length === 0){ alert('Add flowers first.'); return; }
-      const session = fpMember.getSession();
-      if(!session || !session.access_token){
-        fpMember.pendingCheckout = true;
-        fpMember.open('Log in to continue to payment.');
+      const accessToken = getAccessToken();
+      if(!accessToken){
+        const next = window.location.pathname + window.location.search;
+        window.location.href = '/login?next=' + encodeURIComponent(next);
         return;
       }
       const apt = document.getElementById('aptInput').value.trim();
@@ -449,14 +240,17 @@ const PUJA_PACK = {
         items,
         kind: this.kind(),
         delivery_window: items.some(i => /puja|jasmine|marigold|lotus|tulsi|bilva|betel|mango/i.test(i.name)) ? 'puja' : 'decorative',
-        notes: session.phone ? ('member:' + session.phone) : null
+        notes: null
       };
       let checkout = null;
       try {
-        const res = await fetch(FP.url + '/rest/v1/rpc/place_member_checkout', {
+        const res = await fetch('/api/orders/checkout', {
           method: 'POST',
-          headers: restHeaders(session.access_token, 'return=representation'),
-          body: JSON.stringify({ payload })
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
         const text = await res.text();
         if(!res.ok) throw new Error(text || 'Checkout failed');
@@ -465,7 +259,7 @@ const PUJA_PACK = {
         alert('Could not save the order. ' + (err.message || err));
         return;
       }
-      const orderNumber = checkout && checkout.order_number;
+      const orderNumber = checkout && (checkout.orderNumber || checkout.order_number);
       if(!orderNumber){
         alert('Checkout did not return an order number.');
         return;
@@ -474,10 +268,10 @@ const PUJA_PACK = {
         sessionStorage.setItem('fp_last_order', JSON.stringify({
           id: orderNumber,
           order_number: orderNumber,
-          subscription_numbers: (checkout && checkout.subscription_numbers) || [],
-          delivery_order_numbers: (checkout && checkout.delivery_order_numbers) || [],
+          subscription_numbers: (checkout && (checkout.subscriptionNumbers || checkout.subscription_numbers)) || [],
+          delivery_order_numbers: (checkout && (checkout.deliveryOrderNumbers || checkout.delivery_order_numbers)) || [],
           items, subtotal: this.subtotal(),
-          community: apt, block_flat: block, phone: session.phone, name: session.name
+          community: apt, block_flat: block
         }));
       } catch (e) {}
       this.closePanel();

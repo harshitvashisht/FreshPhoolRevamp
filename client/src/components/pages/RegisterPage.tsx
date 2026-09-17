@@ -9,9 +9,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const next = new URLSearchParams(window.location.search).get("next");
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
 
   if (!loading && role) {
-    window.location.replace(homeFor(role));
+    window.location.replace(safeNext || homeFor(role));
     return null;
   }
 
@@ -21,7 +23,7 @@ export default function RegisterPage() {
     setBusy(true);
     try {
       const profile = await register({ name, email, phone, password });
-      window.location.href = homeFor(profile.role);
+      window.location.href = safeNext || homeFor(profile.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not register");
     } finally {
@@ -61,7 +63,7 @@ export default function RegisterPage() {
           {error ? <p className="fp-err">{error}</p> : null}
         </form>
         <p className="fp-muted" style={{ marginTop: 18 }}>
-          Already a member? <a href="/login">Sign in</a>
+          Already a member? <a href={safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"}>Sign in</a>
         </p>
       </div>
     </main>
