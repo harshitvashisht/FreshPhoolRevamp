@@ -11,6 +11,9 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("7d"),
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(6),
+  RAZORPAY_KEY_ID: z.string().min(1).optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
 export const env = envSchema.parse(process.env);

@@ -84,7 +84,7 @@ model Member {
   id          String           @id @default(uuid())
   userId      String           @unique
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phoneE164   String
+  phoneE164   String           @unique
   name        String
   email       String?
   createdAt   DateTime         @default(now())
@@ -170,6 +170,7 @@ model Order {
   updatedAt       DateTime        @updatedAt
   lines           OrderLine[]
   payments        Payment[]
+  invoice         Invoice?
   recurring       RecurringOrder[]
 
   @@index([memberId])
@@ -203,13 +204,31 @@ model Payment {
   order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amountRupee Int
   status      PaymentStatus @default(pending)
-  provider    String        @default("razorpay_stub")
+  provider    String        @default("razorpay")
   providerRef String?
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String? @unique
+  razorpaySignature String?
+  invoice       Invoice?
   createdAt   DateTime      @default(now())
   confirmedAt DateTime?
 
   @@index([orderId])
   @@map("payments")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber String   @unique
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentId     String?  @unique
+  payment       Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  amountRupee   Int
+  currency      String   @default("INR")
+  issuedAt      DateTime @default(now())
+
+  @@map("invoices")
 }
 
 model RecurringOrder {

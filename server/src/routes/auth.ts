@@ -11,10 +11,10 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const body = z
       .object({
-        email: z.string().email(),
+        email: z.string().trim().toLowerCase().email(),
         password: z.string().min(6),
-        name: z.string().min(2),
-        phone: z.string().min(10),
+        name: z.string().trim().min(2),
+        phone: z.string().trim().min(10),
       })
       .parse(req.body);
     const session = await auth.registerMember(body);

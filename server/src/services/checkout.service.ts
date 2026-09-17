@@ -84,14 +84,11 @@ export async function placeCheckout(input: {
   memberId: string;
   community: string;
   blockFlat: string;
+  addressId?: string;
   notes?: string | null;
   items: CartItem[];
 }) {
   if (!input.items.length) throw new HttpError(400, "Add flowers first");
-  if (!input.community.trim() || !input.blockFlat.trim()) {
-    throw new HttpError(400, "Apartment and block / flat are required");
-  }
-
   const member = await prisma.member.findUnique({ where: { id: input.memberId } });
   if (!member) throw new HttpError(401, "Member profile missing");
 
@@ -133,12 +130,19 @@ export async function placeCheckout(input: {
   let subSeq = lastSub ? Number(lastSub.subscriptionNumber.slice(subHead.length)) : 0;
 
   const result = await prisma.$transaction(async (tx) => {
-    const address = await tx.address.create({
+    const address = input.addressId
+      ? await tx.address.findFirst({ where: { id: input.addressId, memberId: member.id } })
+      : null;
+    if (input.addressId && !address) throw new HttpError(404, "Selected delivery address was not found");
+    if (!address && (!input.community.trim() || !input.blockFlat.trim())) {
+      throw new HttpError(400, "Apartment and block / flat are required");
+    }
+    const deliveryAddress = address ?? await tx.address.create({
       data: {
         memberId: member.id,
         community: input.community.trim(),
         blockFlat: input.blockFlat.trim(),
-        isDefault: true,
+        isDefault: false,
       },
     });
 
@@ -146,9 +150,9 @@ export async function placeCheckout(input: {
       data: {
         orderNumber,
         memberId: member.id,
-        addressId: address.id,
-        community: address.community,
-        blockFlat: address.blockFlat,
+        addressId: deliveryAddress.id,
+        community: deliveryAddress.community,
+        blockFlat: deliveryAddress.blockFlat,
         kind,
         deliveryWindow: window,
         status: "payment_pending",
@@ -173,7 +177,7 @@ export async function placeCheckout(input: {
           create: {
             amountRupee: subtotal,
             status: "pending",
-            provider: "razorpay_stub",
+            provider: "razorpay",
           },
         },
       },
@@ -197,8 +201,8 @@ export async function placeCheckout(input: {
           durationDays: item.durationDays,
           cadence: item.cadence,
           prepaidAmountRupee: item.lineTotal,
-          community: address.community,
-          blockFlat: address.blockFlat,
+          community: deliveryAddress.community,
+          blockFlat: deliveryAddress.blockFlat,
           status: "pending_payment",
           periodStart: start,
           periodEnd: addDays(start, item.durationDays),

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { Role } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { signToken } from "../lib/jwt.js";
 import { HttpError } from "../lib/httpError.js";
@@ -53,31 +53,44 @@ export async function registerMember(input: {
     throw new HttpError(400, "Enter a valid 10-digit Indian mobile number");
   }
 
+  const phoneE164 = e164(phone);
   const existing = await prisma.user.findFirst({
-    where: { OR: [{ email }, { phoneE164: e164(phone) }] },
+    where: { OR: [{ email }, { phoneE164 }] },
+    select: { email: true, phoneE164: true },
   });
-  if (existing) throw new HttpError(409, "Email or phone already registered");
+  if (existing?.email === email) throw new HttpError(409, "An account already exists for this email");
+  if (existing?.phoneE164 === phoneE164) throw new HttpError(409, "An account already exists for this mobile number");
 
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      name: input.name.trim(),
-      phoneE164: e164(phone),
-      role: "MEMBER",
-      member: {
-        create: {
-          phoneE164: e164(phone),
-          name: input.name.trim(),
-          email,
+  try {
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        name: input.name.trim(),
+        phoneE164,
+        role: "MEMBER",
+        member: {
+          create: {
+            phoneE164,
+            name: input.name.trim(),
+            email,
+          },
         },
       },
-    },
-    include: { member: true },
-  });
+      include: { member: true },
+    });
 
-  return issueSession(user);
+    return issueSession(user);
+  } catch (error) {
+    // The read above gives a useful message, while this database constraint catch
+    // protects against two simultaneous registrations using the same details.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const target = Array.isArray(error.meta?.target) ? error.meta.target.join(" ") : String(error.meta?.target || "");
+      throw new HttpError(409, target.includes("phone") ? "An account already exists for this mobile number" : "An account already exists for this email");
+    }
+    throw error;
+  }
 }
 
 export async function login(emailRaw: string, password: string) {

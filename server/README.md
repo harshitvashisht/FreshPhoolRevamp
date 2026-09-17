@@ -44,6 +44,10 @@ Send `Authorization: Bearer <accessToken>`.
 
 Checkout creates a pending order, a Razorpay stub payment, and recurring rows for daily/weekly/monthly lines.
 
+## Razorpay
+
+Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` in `.env`, then configure a Razorpay webhook at `POST /api/payments/webhook` for `payment.captured`, `payment.failed`, and `order.paid` events. The browser receives only the key ID; order creation, signature verification, payment confirmation, and invoice creation run on the server.
+
 ## Ops
 
 Admin token required.
