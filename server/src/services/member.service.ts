@@ -1,4 +1,5 @@
-import type { RecurringStatus } from "@prisma/client";
+import { Prisma, type RecurringStatus } from "@prisma/client";
+import { e164, normalizePhone } from "./auth.service.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../lib/httpError.js";
 
@@ -93,23 +94,34 @@ export async function patchMyRecurring(memberId: string, id: string, status: Rec
   return prisma.recurringOrder.update({ where: { id }, data: { status } });
 }
 
-export async function updateProfile(userId: string, name: string) {
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { name: name.trim() },
-    include: { member: true },
-  });
-  if (user.member) {
-    await prisma.member.update({
-      where: { id: user.member.id },
-      data: { name: name.trim() },
-    });
+export async function updateProfile(userId: string, input: { name: string; phone?: string }) {
+  const name = input.name.trim();
+  let phoneE164: string | undefined;
+  if (input.phone !== undefined) {
+    const phone = normalizePhone(input.phone);
+    if (!phone || !/^91[6-9]\d{9}$/.test(phone)) {
+      throw new HttpError(400, "Enter a valid 10-digit Indian mobile number");
+    }
+    phoneE164 = e164(phone);
+    const existing = await prisma.user.findFirst({ where: { phoneE164, NOT: { id: userId } }, select: { id: true } });
+    if (existing) throw new HttpError(409, "An account already exists for this mobile number");
   }
-  return {
-    id: user.id,
-    email: user.email,
-    name: name.trim(),
-    phoneE164: user.phoneE164,
-    role: user.role,
-  };
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        phoneE164,
+        member: { update: { name, phoneE164 } },
+      },
+      include: { member: true },
+    });
+    return { id: user.id, email: user.email, name: user.name, phoneE164: user.phoneE164, role: user.role };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new HttpError(409, "An account already exists for this mobile number");
+    }
+    throw error;
+  }
 }

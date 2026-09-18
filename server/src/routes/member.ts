@@ -18,8 +18,8 @@ function memberId(req: { user?: { memberId?: string | null } }) {
 memberRouter.patch(
   "/profile",
   asyncHandler(async (req, res) => {
-    const body = z.object({ name: z.string().min(2) }).parse(req.body);
-    res.json(await member.updateProfile(req.user!.sub, body.name));
+    const body = z.object({ name: z.string().trim().min(2), phone: z.string().trim().min(10).optional() }).parse(req.body);
+    res.json(await member.updateProfile(req.user!.sub, body));
   }),
 );
 
