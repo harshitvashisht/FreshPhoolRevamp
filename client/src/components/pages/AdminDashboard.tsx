@@ -89,12 +89,23 @@ type Zone = {
   notes: string | null;
 };
 
+type ProductRequest = {
+  id: string;
+  qty: number;
+  variant: string | null;
+  status: "pending" | "contacted" | "closed";
+  createdAt: string;
+  product: { name: string; unit: string };
+  member: { name: string; email: string | null; phoneE164: string };
+};
+
 const LINKS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/recurring", label: "Recurring" },
   { href: "/admin/members", label: "Members" },
+  { href: "/admin/requests", label: "Requested items" },
   { href: "/admin/catalog", label: "Catalog" },
   { href: "/admin/zones", label: "Zones" },
   { href: "/admin/export", label: "Export" },
@@ -115,6 +126,7 @@ function page() {
   if (path === "/admin/payments") return "payments";
   if (path === "/admin/recurring") return "recurring";
   if (path === "/admin/members") return "members";
+  if (path === "/admin/requests") return "requests";
   if (path === "/admin/catalog") return "catalog";
   if (path === "/admin/zones") return "zones";
   if (path === "/admin/export") return "export";
@@ -418,6 +430,42 @@ function MembersPage() {
   );
 }
 
+function RequestsPage() {
+  const [rows, setRows] = useState<ProductRequest[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api<ProductRequest[]>("/admin/requests")
+      .then(setRows)
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load requests"));
+  }, []);
+
+  return (
+    <>
+      <h1>Requested items</h1>
+      <p className="fp-muted">Unpriced product requests from signed-in members. Contact the customer to confirm availability and price.</p>
+      {error ? <p className="fp-err">{error}</p> : null}
+      <div className="fp-card" style={{ marginTop: 16, overflowX: "auto" }}>
+        <table className="fp-table">
+          <thead><tr><th>Requested</th><th>Qty</th><th>Customer</th><th>Contact</th><th>When</th><th>Status</th></tr></thead>
+          <tbody>
+            {rows.length ? rows.map((row) => (
+              <tr key={row.id}>
+                <td>{row.product.name}{row.variant ? <div className="fp-muted">{row.variant}</div> : null}</td>
+                <td>{row.qty} {row.product.unit}</td>
+                <td>{row.member.name}</td>
+                <td>{row.member.email}<br />{row.member.phoneE164}</td>
+                <td>{whenIst(row.createdAt)}</td>
+                <td>{row.status}</td>
+              </tr>
+            )) : <tr><td colSpan={6} className="fp-muted">No product requests yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 function CatalogPage() {
   const [rows, setRows] = useState<Product[]>([]);
   const [skus, setSkus] = useState<CatalogSku[]>([]);
@@ -695,6 +743,7 @@ function Inner() {
   const { board, error, setError, load } = useBoard();
   const body = useMemo(() => {
     if (view === "members") return <MembersPage />;
+    if (view === "requests") return <RequestsPage />;
     if (view === "catalog") return <CatalogPage />;
     if (view === "zones") return <ZonesPage />;
     if (view === "export") return <ExportPage />;

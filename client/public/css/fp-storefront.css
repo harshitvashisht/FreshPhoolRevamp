@@ -68,6 +68,8 @@ p{line-height:1.6;color:var(--muted)}
 .stepper{display:flex;align-items:center;gap:2px;border:1.5px solid var(--line);border-radius:100px;padding:2px;background:var(--card)}
 .step-btn{width:24px;height:24px;border-radius:50%;border:0;background:transparent;cursor:pointer;font-weight:700}
 .step-val{min-width:22px;text-align:center;font-weight:600;font-size:13px}
+.request-price-btn{width:100%;margin-top:12px;padding:9px 12px;border:1.5px solid var(--accent);border-radius:100px;background:transparent;color:var(--ember-dark);font-size:12px;font-weight:800;cursor:pointer;transition:background .15s,color .15s}
+.request-price-btn:hover{background:var(--accent);color:#fff}
 .cadence-row{margin-top:10px;display:flex;flex-direction:column;gap:8px}
 .cadence-row label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .seg{display:flex;flex-wrap:wrap;gap:6px}

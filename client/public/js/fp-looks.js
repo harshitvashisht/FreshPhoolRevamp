@@ -186,6 +186,31 @@ const PUJA_PACK = {
       this.openPanel();
     },
 
+    async requestItem(card){
+      const accessToken = getAccessToken();
+      if(!accessToken){
+        const next = window.location.pathname + window.location.search;
+        window.location.href = '/login?next=' + encodeURIComponent(next);
+        return;
+      }
+      const qty = parseInt(card.querySelector('.step-val')?.textContent || '0', 10) || 0;
+      if(qty < 1){ alert('Choose the quantity you would like to request first.'); return; }
+      const activeSwatch = card.querySelector('.swatch.active');
+      const productName = card.dataset.name || '';
+      try {
+        const response = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productName, qty, variant: activeSwatch?.dataset.color })
+        });
+        const data = await response.json().catch(() => ({}));
+        if(!response.ok) throw new Error(data.error || 'Could not send your request');
+        alert('Your request has been sent. FreshPhool will contact you with the price and availability.');
+      } catch(error) {
+        alert(error.message || 'Could not send your request');
+      }
+    },
+
     count(){
       return Object.values(this.items).reduce((sum, i) => sum + i.qty, 0);
     },
@@ -417,6 +442,20 @@ const PUJA_PACK = {
   };
 
   syncAuthNavigation();
+
+  (function addRequestButtons(){
+    document.querySelectorAll('.prod-card[data-price="0"]').forEach(card => {
+      if(card.querySelector('.request-price-btn')) return;
+      const priceLabel = card.querySelector('.price')?.textContent || '';
+      if(!/on request/i.test(priceLabel)) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'request-price-btn';
+      button.textContent = 'Request price';
+      button.addEventListener('click', () => fpCart.requestItem(card));
+      card.querySelector('.prod-info')?.appendChild(button);
+    });
+  })();
 
   (function packPicker(){
     if(!document.getElementById('packSizes') || !document.getElementById('addPackBtn')) return;
