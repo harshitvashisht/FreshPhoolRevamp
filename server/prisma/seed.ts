@@ -34,6 +34,20 @@ const garlands = [
   { slug: "betel-leaf-garland", name: "Betel Leaf Garland", unit: "garland", priceRupee: null, sortOrder: 5 },
 ];
 
+// Products displayed as “On request” are real catalog entries with no price.
+// This allows customers to request them without permitting arbitrary names.
+const requestOnlyProducts = [
+  { slug: "anthurium", name: "Anthurium", category: "STEM" as const, unit: "stem" },
+  { slug: "tuberose", name: "Tuberose", category: "STEM" as const, unit: "stem" },
+  { slug: "asparagus-fern", name: "Asparagus Fern", category: "STEM" as const, unit: "stem" },
+  { slug: "eucalyptus", name: "Eucalyptus", category: "STEM" as const, unit: "stem" },
+  { slug: "marigold", name: "Marigold", category: "PUJA" as const, unit: "pack" },
+  { slug: "durva-grass", name: "Durva Grass", category: "PUJA" as const, unit: "bunch" },
+  { slug: "loose-tulsi-leaves", name: "Loose Tulsi Leaves", category: "PUJA" as const, unit: "pack" },
+  { slug: "loose-lily-flowers", name: "Loose Lily Flowers", category: "PUJA" as const, unit: "pack" },
+  { slug: "loose-rose-flowers", name: "Loose Rose Flowers", category: "PUJA" as const, unit: "pack" },
+];
+
 const pujaPackPrices: Record<string, Record<number, number>> = {
   Small: { 7: 149, 30: 699, 90: 1899 },
   Medium: { 7: 199, 30: 899, 90: 2499 },
@@ -114,6 +128,14 @@ async function main() {
       where: { slug: p.slug },
       update: p,
       create: { ...p, category: "GARLAND" },
+    });
+  }
+
+  for (const p of requestOnlyProducts) {
+    await prisma.product.upsert({
+      where: { slug: p.slug },
+      update: { ...p, priceRupee: null, active: true },
+      create: { ...p, priceRupee: null, active: true },
     });
   }
 

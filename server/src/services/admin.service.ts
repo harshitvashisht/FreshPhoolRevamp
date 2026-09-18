@@ -278,6 +278,16 @@ export async function listCatalogSkus() {
   });
 }
 
+export async function listProductRequests() {
+  return prisma.productRequest.findMany({
+    include: {
+      product: { select: { name: true, unit: true } },
+      member: { select: { name: true, email: true, phoneE164: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function listAllZones() {
   return prisma.deliveryZone.findMany({ orderBy: { pincode: "asc" } });
 }

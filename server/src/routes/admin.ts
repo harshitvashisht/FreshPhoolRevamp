@@ -76,6 +76,13 @@ adminRouter.get(
   }),
 );
 
+adminRouter.get(
+  "/requests",
+  asyncHandler(async (_req, res) => {
+    res.json(await admin.listProductRequests());
+  }),
+);
+
 adminRouter.post(
   "/products",
   asyncHandler(async (req, res) => {

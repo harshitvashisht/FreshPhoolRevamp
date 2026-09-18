@@ -67,6 +67,12 @@ enum Offering {
   stem
 }
 
+enum ProductRequestStatus {
+  pending
+  contacted
+  closed
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -82,16 +88,17 @@ model User {
 }
 
 model Member {
-  id          String           @id @default(uuid())
-  userId      String           @unique
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phoneE164   String           @unique
-  name        String
-  email       String?
-  createdAt   DateTime         @default(now())
-  addresses   Address[]
-  orders      Order[]
-  recurring   RecurringOrder[]
+  id        String           @id @default(uuid())
+  userId    String           @unique
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneE164 String           @unique
+  name      String
+  email     String?
+  createdAt DateTime         @default(now())
+  addresses Address[]
+  orders    Order[]
+  recurring RecurringOrder[]
+  requests  ProductRequest[]
 
   @@map("members")
 }
@@ -112,20 +119,38 @@ model Address {
 }
 
 model Product {
-  id         String          @id @default(uuid())
-  sku        String?         @unique
-  slug       String          @unique
+  id         String           @id @default(uuid())
+  sku        String?          @unique
+  slug       String           @unique
   name       String
   category   ProductCategory
   unit       String
   priceRupee Int?
   imageUrl   String?
-  active     Boolean         @default(true)
-  sortOrder  Int             @default(0)
+  active     Boolean          @default(true)
+  sortOrder  Int              @default(0)
   variants   ProductVariant[]
   lines      OrderLine[]
+  requests   ProductRequest[]
 
   @@map("products")
+}
+
+model ProductRequest {
+  id        String               @id @default(uuid())
+  memberId  String
+  productId String
+  qty       Int
+  variant   String?
+  status    ProductRequestStatus @default(pending)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  member    Member               @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([memberId, createdAt])
+  @@index([status, createdAt])
+  @@map("product_requests")
 }
 
 model ProductVariant {
@@ -158,37 +183,37 @@ model CatalogSku {
 }
 
 model DeliveryZone {
-  id        String  @id @default(uuid())
-  pincode   String  @unique
-  locality  String
-  active    Boolean @default(true)
-  notes     String?
+  id       String  @id @default(uuid())
+  pincode  String  @unique
+  locality String
+  active   Boolean @default(true)
+  notes    String?
 
   @@map("delivery_zones")
 }
 
 model Order {
-  id              String          @id @default(uuid())
-  orderNumber     String          @unique
-  memberId        String?
-  member          Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
-  addressId       String?
-  address         Address?        @relation(fields: [addressId], references: [id], onDelete: SetNull)
-  community       String
-  blockFlat       String
-  kind            OrderKind
-  deliveryWindow  DeliveryWindow
-  status          OrderStatus     @default(payment_pending)
-  subtotalRupee   Int
-  notes           String?
-  items           Json
-  paidAt          DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  lines           OrderLine[]
-  payments        Payment[]
-  invoice         Invoice?
-  recurring       RecurringOrder[]
+  id             String           @id @default(uuid())
+  orderNumber    String           @unique
+  memberId       String?
+  member         Member?          @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  addressId      String?
+  address        Address?         @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  community      String
+  blockFlat      String
+  kind           OrderKind
+  deliveryWindow DeliveryWindow
+  status         OrderStatus      @default(payment_pending)
+  subtotalRupee  Int
+  notes          String?
+  items          Json
+  paidAt         DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  lines          OrderLine[]
+  payments       Payment[]
+  invoice        Invoice?
+  recurring      RecurringOrder[]
 
   @@index([memberId])
   @@index([status, createdAt])
@@ -196,40 +221,40 @@ model Order {
 }
 
 model OrderLine {
-  id            String   @id @default(uuid())
-  orderId       String
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId     String?
-  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  name          String
-  qty           Int
-  unit          String
-  unitPrice     Int
-  lineTotal     Int
-  cadence       Cadence  @default(one_time)
-  durationDays  Int      @default(1)
-  offering      Offering @default(custom)
-  size          String?
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name         String
+  qty          Int
+  unit         String
+  unitPrice    Int
+  lineTotal    Int
+  cadence      Cadence  @default(one_time)
+  durationDays Int      @default(1)
+  offering     Offering @default(custom)
+  size         String?
 
   @@index([orderId])
   @@map("order_lines")
 }
 
 model Payment {
-  id          String        @id @default(uuid())
-  orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amountRupee Int
-  status      PaymentStatus @default(pending)
-  provider    String        @default("razorpay")
-  providerRef String?
-  razorpayOrderId   String? @unique
-  razorpayPaymentId String? @unique
+  id                String        @id @default(uuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amountRupee       Int
+  status            PaymentStatus @default(pending)
+  provider          String        @default("razorpay")
+  providerRef       String?
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
   razorpaySignature String?
   checkoutExpiresAt DateTime?
-  invoice       Invoice?
-  createdAt   DateTime      @default(now())
-  confirmedAt DateTime?
+  invoice           Invoice?
+  createdAt         DateTime      @default(now())
+  confirmedAt       DateTime?
 
   @@index([orderId])
   @@map("payments")
@@ -250,26 +275,26 @@ model Invoice {
 }
 
 model RecurringOrder {
-  id                   String          @id @default(uuid())
-  subscriptionNumber   String          @unique
-  memberId             String?
-  member               Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
-  sourceOrderId        String?
-  sourceOrder          Order?          @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
-  offering             Offering
-  name                 String
-  size                 String?
-  qty                  Int             @default(1)
-  durationDays         Int
-  cadence              Cadence
-  prepaidAmountRupee   Int
-  community            String
-  blockFlat            String
-  status               RecurringStatus @default(pending_payment)
-  periodStart          DateTime
-  periodEnd            DateTime
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  id                 String          @id @default(uuid())
+  subscriptionNumber String          @unique
+  memberId           String?
+  member             Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  sourceOrderId      String?
+  sourceOrder        Order?          @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  offering           Offering
+  name               String
+  size               String?
+  qty                Int             @default(1)
+  durationDays       Int
+  cadence            Cadence
+  prepaidAmountRupee Int
+  community          String
+  blockFlat          String
+  status             RecurringStatus @default(pending_payment)
+  periodStart        DateTime
+  periodEnd          DateTime
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@index([memberId])
   @@index([status])
