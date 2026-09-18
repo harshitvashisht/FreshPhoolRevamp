@@ -1,16 +1,11 @@
-<svg width="440" height="110" viewBox="0 0 440 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FreshPhool">
-  <!-- Horizontal nav mark with padded viewBox so petals are not clipped -->
-  <g transform="translate(58,55) scale(0.72)">
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(0)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(72)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(144)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(216)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(288)"/>
-    <circle cx="0" cy="0" r="16" fill="#FAC775"/>
-    <circle cx="0" cy="0" r="8" fill="#EF9F27"/>
-  </g>
-  <text x="108" y="68" font-family="Georgia, 'Times New Roman', serif" font-size="44"
-        font-weight="700" fill="#C2185B" letter-spacing="-0.5">Fresh</text>
-  <text x="238" y="68" font-family="Georgia, 'Times New Roman', serif" font-size="44"
-        font-weight="400" font-style="italic" fill="#880E4F" letter-spacing="-0.5">Phool</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
+<rect width="1400" height="420" fill="none"/>
+<g transform="translate(35 95) scale(.78)">
+  <path d="M65 120 C25 105 5 72 12 35 C48 38 73 65 76 103 Z" fill="#1B5E3F"/>
+  <path d="M135 120 C175 105 195 72 188 35 C152 38 127 65 124 103 Z" fill="#C96F6A"/>
+  <path d="M100 120 C63 86 65 37 100 0 C135 37 137 86 100 120 Z" fill="#C96F6A"/>
+  <path d="M100 112 C79 81 83 42 100 17 C117 42 121 81 100 112 Z" fill="#E28B83"/>
+</g>
+<text x="250" y="215" font-family="Georgia, 'Times New Roman', serif" font-size="105" font-weight="700" fill="#1B5E3F">FreshPhool</text>
+<text x="253" y="290" font-family="Arial, Helvetica, sans-serif" font-size="44" fill="#1B5E3F">Freshness, delivered every morning.</text>
 </svg>

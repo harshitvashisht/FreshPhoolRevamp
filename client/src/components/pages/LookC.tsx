@@ -35,9 +35,7 @@ export function LookCHeader2() {
             <input type="search" id="navSearch" placeholder="Search\u2026" aria-label="Search flowers" autoComplete="off" onInput={(event) => runInlineHandler(event, "fpNav.search(this.value)")} onKeyDown={(event) => runInlineHandler(event, "if(event.key==='Enter')fpNav.searchEnter()")} />
           </div>
 
-          <a className="member-login-btn" href="/dashboard" style={{ textDecoration: "none" }}>Dashboard</a>
-          <a className="member-login-btn" href="/login" style={{ textDecoration: "none" }}>Sign in</a>
-          <a className="member-login-btn" href="/dashboard" style={{ textDecoration: "none" }}>Dashboard</a>
+          <a className="member-login-btn" href="/login" style={{ textDecoration: "none" }}>Sign in / Sign up</a>
           <button className="nav-cart-btn" onClick={(event) => runInlineHandler(event, "fpCart.openPanel()")} aria-label="View order">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="9" cy="21" r="1"></circle>

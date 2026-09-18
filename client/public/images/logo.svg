@@ -1,25 +1,12 @@
-<svg width="560" height="240" viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg">
-  <!-- FreshPhool Primary Logo — Pink petals, yellow centre, serif wordmark -->
-  <!-- Petal rosette -->
-  <g transform="translate(96,120)">
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(0)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(72)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(144)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#C2185B" transform="rotate(216)"/>
-    <ellipse cx="0" cy="-40" rx="18" ry="32" fill="#D4537E" transform="rotate(288)"/>
-    <!-- Yellow centre -->
-    <circle cx="0" cy="0" r="16" fill="#FAC775"/>
-    <circle cx="0" cy="0" r="8" fill="#EF9F27"/>
-  </g>
-  <!-- Wordmark: Fresh -->
-  <text x="172" y="92" font-family="Georgia, serif" font-size="72"
-        font-weight="700" fill="#C2185B" letter-spacing="-1">Fresh</text>
-  <!-- Wordmark: Phool -->
-  <text x="172" y="164" font-family="Georgia, serif" font-size="72"
-        font-weight="400" fill="#880E4F" font-style="italic" letter-spacing="-1">Phool</text>
-  <!-- Divider rule -->
-  <line x1="172" y1="178" x2="548" y2="178" stroke="#F4C0D1" stroke-width="2"/>
-  <!-- Sub-tagline -->
-  <text x="172" y="204" font-family="Arial, sans-serif" font-size="18"
-        fill="#D4537E" letter-spacing="5">BENGALURU · DAILY FLOWERS</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+<rect width="1200" height="520" fill="none"/>
+<!-- FreshPhool lotus mark -->
+<g transform="translate(535 20)">
+  <path d="M65 120 C25 105 5 72 12 35 C48 38 73 65 76 103 Z" fill="#1B5E3F"/>
+  <path d="M135 120 C175 105 195 72 188 35 C152 38 127 65 124 103 Z" fill="#C96F6A"/>
+  <path d="M100 120 C63 86 65 37 100 0 C135 37 137 86 100 120 Z" fill="#C96F6A"/>
+  <path d="M100 112 C79 81 83 42 100 17 C117 42 121 81 100 112 Z" fill="#E28B83"/>
+</g>
+<text x="600" y="285" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="108" font-weight="700" fill="#1B5E3F">FreshPhool</text>
+<text x="600" y="355" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#1B5E3F">Freshness, delivered every morning.</text>
 </svg>

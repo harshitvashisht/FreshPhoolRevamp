@@ -9,8 +9,34 @@ const PUJA_PACK = {
     return localStorage.getItem('fp.accessToken');
   }
 
+  async function syncAuthNavigation(){
+    const authLinks = Array.from(document.querySelectorAll('.member-login-btn'));
+    if(!authLinks.length) return;
+    const token = getAccessToken();
+    if(!token) return;
+    try {
+      const response = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
+      if(!response.ok) throw new Error('Session expired');
+      const profile = await response.json();
+      authLinks.forEach(link => link.remove());
+      document.querySelectorAll('.nav-cta').forEach(cta => {
+        const profileLink = document.createElement('a');
+        profileLink.className = 'member-profile-btn';
+        profileLink.href = profile.role === 'ADMIN' ? '/admin' : '/dashboard';
+        profileLink.setAttribute('aria-label', 'Open your profile');
+        profileLink.title = profile.name || 'My profile';
+        profileLink.textContent = (profile.name || 'U').trim().charAt(0).toUpperCase();
+        const cart = cta.querySelector('.nav-cart-btn');
+        cta.insertBefore(profileLink, cart || null);
+      });
+    } catch (_) {
+      localStorage.removeItem('fp.accessToken');
+    }
+  }
+
   const fpCart = {
     items: {},
+    addresses: [],
 
     isRecurring(cadence){
       return cadence === 'daily' || cadence === 'weekly' || cadence === 'monthly';
@@ -42,6 +68,7 @@ const PUJA_PACK = {
 
     selectColor(swatchBtn){
       const card = swatchBtn.closest('.prod-card');
+      const previous = card.querySelector('.swatch.active');
       card.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
       swatchBtn.classList.add('active');
       const img = card.querySelector('.var-img');
@@ -49,7 +76,15 @@ const PUJA_PACK = {
       const tag = card.querySelector('.qty-color-tag');
       if(tag) tag.textContent = swatchBtn.dataset.color;
       const valEl = card.querySelector('.step-val');
-      valEl.textContent = swatchBtn.dataset.qty || '0';
+      const previousQty = Math.max(0, parseInt((previous && previous.dataset.qty) || valEl.textContent || '0', 10) || 0);
+      if(previous && previous !== swatchBtn){
+        delete this.items[`${card.dataset.name} (${previous.dataset.color})`];
+      }
+      const qty = Math.max(0, parseInt(swatchBtn.dataset.qty || String(previousQty), 10) || 0);
+      swatchBtn.dataset.qty = qty;
+      valEl.textContent = qty;
+      if(qty > 0) this.set(`${card.dataset.name} (${swatchBtn.dataset.color})`, card, qty);
+      else this.render();
     },
 
     inc(btn){
@@ -93,6 +128,35 @@ const PUJA_PACK = {
         delete this.items[name];
       }
       this.render();
+    },
+
+    changeQty(name, amount){
+      const item = this.items[name];
+      if(!item) return;
+      item.qty = Math.max(0, item.qty + amount);
+      if(!item.qty) delete this.items[name];
+      this.syncCardQuantities();
+      this.render();
+    },
+
+    remove(name){
+      if(!this.items[name]) return;
+      delete this.items[name];
+      this.syncCardQuantities();
+      this.render();
+    },
+
+    syncCardQuantities(){
+      document.querySelectorAll('.prod-card').forEach(card => {
+        const activeSwatch = card.querySelector('.swatch.active');
+        const itemName = activeSwatch
+          ? `${card.dataset.name} (${activeSwatch.dataset.color})`
+          : card.dataset.name;
+        const quantity = this.items[itemName]?.qty || 0;
+        const value = card.querySelector('.step-val');
+        if(value) value.textContent = quantity;
+        if(activeSwatch) activeSwatch.dataset.qty = quantity;
+      });
     },
 
     applyCadence(card){
@@ -159,12 +223,17 @@ const PUJA_PACK = {
       const n = this.count();
       const sub = this.subtotal();
       const badge = document.getElementById('navCartBadge');
-      badge.textContent = n;
-      badge.classList.toggle('show', n > 0);
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle('show', n > 0);
+        badge.setAttribute('aria-label', `${n} item${n === 1 ? '' : 's'} in cart`);
+      }
       const bar = document.getElementById('cartBar');
-      bar.classList.toggle('show', n > 0);
-      document.getElementById('cartBarCount').textContent = n + (n === 1 ? ' item' : ' items');
-      document.getElementById('cartBarSubtotal').textContent = sub > 0
+      if(bar) bar.classList.toggle('show', n > 0);
+      const barCount = document.getElementById('cartBarCount');
+      if(barCount) barCount.textContent = n + (n === 1 ? ' item' : ' items');
+      const barSubtotal = document.getElementById('cartBarSubtotal');
+      if(barSubtotal) barSubtotal.textContent = sub > 0
         ? 'Prepaid ' + this.fmt(sub) + (this.hasUnpriced() ? ' +' : '')
         : (n ? 'Priced on WhatsApp' : 'Add flowers to get started');
 
@@ -175,17 +244,75 @@ const PUJA_PACK = {
         list.innerHTML = items.map(i => {
           const unitLabel = i.unit ? ` ${i.unit}${i.qty > 1 ? 's' : ''}` : '';
           const amount = i.price > 0 ? this.fmt(this.lineTotal(i)) : 'On request';
-          return `<div class="cart-line"><span>${i.name} × ${i.qty}${unitLabel}<br><small style="color:var(--sage);font-weight:600;">${this.cadenceLabel(i)}${i.offering === 'puja_pack' ? ' · pack' : ''}</small></span><b>${amount}</b></div>`;
+          const itemKey = encodeURIComponent(i.name);
+          return `<div class="cart-line"><span>${i.name}<br><small style="color:var(--sage);font-weight:600;">${this.cadenceLabel(i)}${i.offering === 'puja_pack' ? ' · pack' : ''}</small></span><div class="cart-line-right"><b>${amount}</b><div class="cart-line-controls"><button type="button" class="cart-qty-btn" data-cart-item="${itemKey}" data-cart-change="-1" aria-label="Decrease ${i.name}">−</button><span>${i.qty}${unitLabel}</span><button type="button" class="cart-qty-btn" data-cart-item="${itemKey}" data-cart-change="1" aria-label="Increase ${i.name}">+</button><button type="button" class="cart-remove-btn" data-cart-item="${itemKey}" aria-label="Remove ${i.name}">Remove</button></div></div></div>`;
         }).join('');
+        list.querySelectorAll('.cart-qty-btn').forEach(button => {
+          button.addEventListener('click', () => this.changeQty(decodeURIComponent(button.dataset.cartItem), Number(button.dataset.cartChange)));
+        });
+        list.querySelectorAll('.cart-remove-btn').forEach(button => {
+          button.addEventListener('click', () => this.remove(decodeURIComponent(button.dataset.cartItem)));
+        });
       }
-      document.getElementById('cartTotalRow').style.display = sub > 0 ? 'flex' : 'none';
-      document.getElementById('cartTotalAmt').textContent = this.fmt(sub);
-      document.getElementById('cartPricedNote').style.display = this.hasUnpriced() ? 'block' : 'none';
+      const totalRow = document.getElementById('cartTotalRow');
+      if(totalRow) totalRow.style.display = sub > 0 ? 'flex' : 'none';
+      const totalAmount = document.getElementById('cartTotalAmt');
+      if(totalAmount) totalAmount.textContent = this.fmt(sub);
+      const pricedNote = document.getElementById('cartPricedNote');
+      if(pricedNote) pricedNote.style.display = this.hasUnpriced() ? 'block' : 'none';
+    },
+
+    async loadAddresses(){
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
+      try {
+        const response = await fetch('/api/me/addresses', { headers: { Authorization: 'Bearer ' + accessToken } });
+        if (!response.ok) return;
+        this.addresses = await response.json();
+        this.renderAddressSelector();
+      } catch (_) {
+        // Checkout remains available with a new address if address history cannot load.
+      }
+    },
+
+    renderAddressSelector(){
+      const form = document.querySelector('#cartPanel .cart-form');
+      if (!form) return;
+      let group = document.getElementById('savedAddressGroup');
+      if (!this.addresses.length) {
+        if (group) group.remove();
+        return;
+      }
+      if (!group) {
+        group = document.createElement('div');
+        group.id = 'savedAddressGroup';
+        group.className = 'saved-address-group';
+        form.prepend(group);
+      }
+      group.innerHTML = `<label for="savedAddressSelect">Deliver to</label><select id="savedAddressSelect"><option value="">Use a new address</option>${this.addresses.map((address) => `<option value="${address.id}">${address.community} · ${address.blockFlat}${address.pincode ? ' · ' + address.pincode : ''}${address.isDefault ? ' (Default)' : ''}</option>`).join('')}</select>`;
+      const select = document.getElementById('savedAddressSelect');
+      const selected = this.addresses.find((address) => address.isDefault) || this.addresses[0];
+      if (selected) {
+        select.value = selected.id;
+        this.applyAddress(selected);
+      }
+      select.addEventListener('change', () => {
+        const address = this.addresses.find((row) => row.id === select.value);
+        if (address) this.applyAddress(address);
+      });
+    },
+
+    applyAddress(address){
+      const apt = document.getElementById('aptInput');
+      const block = document.getElementById('blockInput');
+      if (apt) apt.value = address.community;
+      if (block) block.value = address.blockFlat;
     },
 
     openPanel(){
       document.getElementById('cartPanel').classList.add('open');
       document.getElementById('cartOverlay').classList.add('show');
+      this.loadAddresses();
     },
 
     closePanel(){
@@ -237,6 +364,7 @@ const PUJA_PACK = {
       const payload = {
         community: apt,
         block_flat: block,
+        addressId: document.getElementById('savedAddressSelect')?.value || undefined,
         items,
         kind: this.kind(),
         delivery_window: items.some(i => /puja|jasmine|marigold|lotus|tulsi|bilva|betel|mango/i.test(i.name)) ? 'puja' : 'decorative',
@@ -253,7 +381,11 @@ const PUJA_PACK = {
           body: JSON.stringify(payload)
         });
         const text = await res.text();
-        if(!res.ok) throw new Error(text || 'Checkout failed');
+        if(!res.ok) {
+          let message = text;
+          try { message = JSON.parse(text).error || text; } catch (_) {}
+          throw new Error(message || 'Checkout failed');
+        }
         checkout = JSON.parse(text);
       } catch (err) {
         alert('Could not save the order. ' + (err.message || err));
@@ -275,9 +407,11 @@ const PUJA_PACK = {
         }));
       } catch (e) {}
       this.closePanel();
-      window.location.href = 'pay/?order=' + encodeURIComponent(orderNumber);
+      window.location.href = '/pay?order=' + encodeURIComponent(orderNumber);
     }
   };
+
+  syncAuthNavigation();
 
   (function packPicker(){
     if(!document.getElementById('packSizes') || !document.getElementById('addPackBtn')) return;

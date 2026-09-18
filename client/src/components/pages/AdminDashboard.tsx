@@ -23,6 +23,8 @@ type BoardOrder = {
   subtotal: number;
   items: { name?: string; qty?: number }[];
   created_at: string;
+  payment_method?: string | null;
+  payment_status?: string | null;
 };
 
 type Recurring = {
@@ -224,7 +226,7 @@ function PaymentsPage({ board, onChange }: { board: Board; onChange: () => Promi
   return (
     <>
       <h1>Pending payment</h1>
-      <p className="fp-muted">Confirm only after Razorpay / UPI money is in.</p>
+      <p className="fp-muted">Confirm Razorpay only after settlement; confirm Cash on Delivery after cash is collected. Confirmation creates the invoice.</p>
       <div className="fp-card" style={{ marginTop: 16, overflowX: "auto" }}>
         <table className="fp-table">
           <thead>
@@ -233,6 +235,7 @@ function PaymentsPage({ board, onChange }: { board: Board; onChange: () => Promi
               <th>When</th>
               <th>Where</th>
               <th>Items</th>
+              <th>Method</th>
               <th>₹</th>
               <th></th>
             </tr>
@@ -246,6 +249,7 @@ function PaymentsPage({ board, onChange }: { board: Board; onChange: () => Promi
                   {o.community} {o.block_flat}
                 </td>
                 <td>{itemSummary(o.items)}</td>
+                <td>{o.payment_method === "cash_on_delivery" ? "Cash on Delivery" : "Razorpay"}</td>
                 <td>{rupee(o.subtotal)}</td>
                 <td>
                   <button
@@ -265,7 +269,7 @@ function PaymentsPage({ board, onChange }: { board: Board; onChange: () => Promi
             ))}
             {!pending.length ? (
               <tr>
-                <td colSpan={6} className="fp-muted">
+                <td colSpan={7} className="fp-muted">
                   Nothing waiting.
                 </td>
               </tr>

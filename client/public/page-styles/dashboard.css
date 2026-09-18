@@ -52,7 +52,9 @@
 }
 
 .fp-brand img {
-  height: 32px;
+  height: 54px;
+  width: auto;
+  display: block;
 }
 
 .fp-top-meta {

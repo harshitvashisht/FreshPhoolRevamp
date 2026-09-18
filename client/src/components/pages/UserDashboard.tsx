@@ -15,6 +15,7 @@ type Order = {
   createdAt: string;
   notes: string | null;
   lines: { id: string; name: string; qty: number; unit: string; lineTotal: number }[];
+  payments?: { provider: string; status: string }[];
 };
 
 type Recurring = {
@@ -39,7 +40,7 @@ const LINKS = [
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/subscriptions", label: "Subscriptions" },
   { href: "/dashboard/addresses", label: "Addresses" },
-  { href: "/dashboard/account", label: "Account" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 function page() {
@@ -48,8 +49,16 @@ function page() {
   if (path === "/dashboard/orders") return "orders";
   if (path === "/dashboard/subscriptions") return "subs";
   if (path === "/dashboard/addresses") return "addresses";
-  if (path === "/dashboard/account") return "account";
+  if (path === "/dashboard/account" || path === "/dashboard/settings") return "account";
   return "home";
+}
+
+function paymentLabel(order: Order) {
+  const payment = order.payments?.[0];
+  if (!payment) return "Payment pending";
+  if (payment.status === "cash_on_delivery") return "Cash on Delivery";
+  if (payment.status === "confirmed") return "Paid online";
+  return "Online payment pending";
 }
 
 function Overview() {
@@ -113,10 +122,17 @@ function Orders() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<Order[]>("/orders/me")
-      .then(setOrders)
+    load()
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
   }, []);
+
+  async function load() { setOrders(await api<Order[]>("/orders/me")); }
+  async function cancel(order: Order) {
+    if (!window.confirm(`Cancel order ${order.orderNumber}?`)) return;
+    setError("");
+    try { await api(`/orders/${encodeURIComponent(order.orderNumber)}/cancel`, { method: "POST" }); await load(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not cancel order"); }
+  }
 
   return (
     <>
@@ -132,7 +148,9 @@ function Orders() {
               <th>Delivery</th>
               <th>Kind</th>
               <th>₹</th>
+              <th>Payment</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -151,14 +169,19 @@ function Orders() {
                   {o.kind} · {o.deliveryWindow}
                 </td>
                 <td>{rupee(o.subtotalRupee)}</td>
+                <td>{paymentLabel(o)}</td>
                 <td>
                   <span className="fp-pill">{o.status.replaceAll("_", " ")}</span>
+                </td>
+                <td>
+                  {o.status === "payment_pending" ? <><a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(o.orderNumber)}`}>Complete payment</a><button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel(o)}>Cancel</button></> : null}
+                  {o.status === "payment_received" ? <a className="fp-btn fp-btn-ghost" href={`/pay?order=${encodeURIComponent(o.orderNumber)}`}>Download invoice</a> : null}
                 </td>
               </tr>
             ))}
             {!orders.length ? (
               <tr>
-                <td colSpan={6} className="fp-muted">
+                <td colSpan={8} className="fp-muted">
                   No orders yet.
                 </td>
               </tr>
@@ -175,11 +198,18 @@ function OrderDetail() {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
 
+  async function load() { setOrder(await api<Order>(`/orders/${number}`)); }
+
   useEffect(() => {
-    api<Order>(`/orders/${number}`)
-      .then(setOrder)
+    load()
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
   }, [number]);
+
+  async function cancel() {
+    if (!order || !window.confirm(`Cancel order ${order.orderNumber}?`)) return;
+    try { await api(`/orders/${encodeURIComponent(order.orderNumber)}/cancel`, { method: "POST" }); await load(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not cancel order"); }
+  }
 
   if (error) return <p className="fp-err">{error}</p>;
   if (!order) return <p className="fp-muted">Loading order…</p>;
@@ -197,6 +227,7 @@ function OrderDetail() {
         <p>
           Status <span className="fp-pill">{order.status.replaceAll("_", " ")}</span> · {rupee(order.subtotalRupee)}
         </p>
+        <p className="fp-muted">Payment: {paymentLabel(order)}</p>
         <table className="fp-table" style={{ marginTop: 12 }}>
           <thead>
             <tr>
@@ -218,6 +249,10 @@ function OrderDetail() {
           </tbody>
         </table>
         {order.notes ? <p style={{ marginTop: 12 }}>Notes: {order.notes}</p> : null}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
+          {order.status === "payment_pending" ? <><a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(order.orderNumber)}`}>Complete payment</a><button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel()}>Cancel order</button></> : null}
+          {order.status === "payment_received" ? <a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(order.orderNumber)}`}>Download invoice</a> : null}
+        </div>
       </div>
     </>
   );
@@ -403,8 +438,9 @@ function Addresses() {
 }
 
 function Account() {
-  const { profile, refresh } = useAuth();
+  const { profile, refresh, logout } = useAuth();
   const [name, setName] = useState(profile?.name || "");
+  const [phone, setPhone] = useState(profile?.phoneE164 || "");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
@@ -413,7 +449,7 @@ function Account() {
     setError("");
     setMsg("");
     try {
-      await api("/me/profile", { method: "PATCH", body: JSON.stringify({ name }) });
+      await api("/me/profile", { method: "PATCH", body: JSON.stringify({ name, phone }) });
       await refresh();
       setMsg("Saved");
     } catch (err) {
@@ -423,14 +459,14 @@ function Account() {
 
   return (
     <>
-      <h1>Account</h1>
+      <h1>Settings</h1>
       <form className="fp-card fp-form" style={{ marginTop: 16 }} onSubmit={save}>
         <label>Name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} required />
         <label>Email</label>
         <input value={profile?.email || ""} readOnly />
         <label>Phone</label>
-        <input value={profile?.phoneE164 || ""} readOnly />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="10-digit mobile number" required />
         <div style={{ marginTop: 14 }}>
           <button className="fp-btn fp-btn-primary" type="submit">
             Save
@@ -439,6 +475,11 @@ function Account() {
         {msg ? <p className="fp-ok">{msg}</p> : null}
         {error ? <p className="fp-err">{error}</p> : null}
       </form>
+      <div className="fp-card" style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 18 }}>Sign out</h2>
+        <p className="fp-muted">Sign out of this device.</p>
+        <button className="fp-btn fp-btn-ghost" type="button" onClick={logout}>Log out</button>
+      </div>
     </>
   );
 }
