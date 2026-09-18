@@ -54,6 +54,9 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
   if (order.subtotalRupee <= 0) {
     throw new HttpError(400, "This order has items that need a price confirmation");
   }
+  if (order.payments.some((payment) => payment.status === "cash_on_delivery")) {
+    throw new HttpError(409, "Cash on Delivery is already selected for this order");
+  }
 
   const existing = order.payments.find((payment) => payment.razorpayOrderId && payment.status === "pending");
   if (existing?.razorpayOrderId) {
@@ -163,6 +166,54 @@ export async function verifyCheckoutPayment(input: {
   const payment = await prisma.payment.findUnique({ where: { razorpayOrderId: input.razorpayOrderId } });
   if (!payment || payment.orderId !== order.id) throw new HttpError(400, "Payment does not belong to this order");
   return confirmPayment(input);
+}
+
+export async function chooseCashOnDelivery(orderNumber: string, memberId?: string) {
+  const order = await ownedOrder(orderNumber, memberId);
+  if (order.status !== "payment_pending") {
+    throw new HttpError(409, "This order has already been paid or cannot be changed");
+  }
+  if (order.subtotalRupee <= 0) {
+    throw new HttpError(400, "This order has items that need a price confirmation");
+  }
+
+  if (order.payments.some((payment) => payment.status === "cash_on_delivery")) {
+    return {
+      orderNumber: order.orderNumber,
+      amountRupee: order.subtotalRupee,
+      paymentMethod: "cash_on_delivery",
+      message: "Cash on Delivery is already selected for this order.",
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.payment.updateMany({
+      where: { orderId: order.id, status: "pending" },
+      data: {
+        status: "cash_on_delivery",
+        provider: "cash_on_delivery",
+        providerRef: `COD-${order.orderNumber}`,
+      },
+    });
+    if (!updated.count) {
+      await tx.payment.create({
+        data: {
+          orderId: order.id,
+          amountRupee: order.subtotalRupee,
+          status: "cash_on_delivery",
+          provider: "cash_on_delivery",
+          providerRef: `COD-${order.orderNumber}`,
+        },
+      });
+    }
+  });
+
+  return {
+    orderNumber: order.orderNumber,
+    amountRupee: order.subtotalRupee,
+    paymentMethod: "cash_on_delivery",
+    message: "Order placed. Please keep the exact amount ready for delivery.",
+  };
 }
 
 export async function getInvoice(orderNumber: string, memberId?: string) {

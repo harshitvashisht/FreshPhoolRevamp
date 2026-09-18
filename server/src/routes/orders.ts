@@ -89,6 +89,15 @@ ordersRouter.post(
   }),
 );
 
+ordersRouter.post(
+  "/:orderNumber/cash-on-delivery",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
+    res.json(await payment.chooseCashOnDelivery(req.params.orderNumber, memberId));
+  }),
+);
+
 ordersRouter.get(
   "/:orderNumber/invoice",
   requireAuth,

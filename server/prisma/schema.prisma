@@ -41,6 +41,7 @@ enum OrderStatus {
 
 enum PaymentStatus {
   pending
+  cash_on_delivery
   confirmed
   failed
 }

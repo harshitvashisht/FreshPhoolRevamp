@@ -38,6 +38,7 @@ export function serializeOrder(order: {
   paidAt: Date | null;
   createdAt: Date;
   notes: string | null;
+  payments?: { provider: string; status: string }[];
 }) {
   return {
     id: order.id,
@@ -52,12 +53,17 @@ export function serializeOrder(order: {
     paid_at: order.paidAt,
     created_at: order.createdAt,
     notes: order.notes,
+    payment_method: order.payments?.[0]?.provider ?? null,
+    payment_status: order.payments?.[0]?.status ?? null,
   };
 }
 
 export async function listOpsBoard() {
   const [orders, recurring, members, payments, addresses] = await Promise.all([
-    prisma.order.findMany({ orderBy: { createdAt: "desc" }, include: { lines: true } }),
+    prisma.order.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { lines: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+    }),
     prisma.recurringOrder.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.member.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.payment.findMany({ orderBy: { createdAt: "desc" } }),
@@ -89,7 +95,7 @@ export async function listOpsBoard() {
       pending: pending.length,
       gmv: paid.reduce((s, o) => s + o.subtotalRupee, 0),
       newMembers: members.filter((m) => m.createdAt >= from).length,
-      pendingPayments: payments.filter((p) => p.status === "pending" && p.createdAt >= from).length,
+      pendingPayments: payments.filter((p) => ["pending", "cash_on_delivery"].includes(p.status) && p.createdAt >= from).length,
       activeRecurring: recurring.filter((r) => r.status === "active").length,
     };
   };
@@ -134,10 +140,24 @@ export async function patchOrderStatus(id: string, statusLabel: string) {
   const order = await prisma.$transaction(async (tx) => {
     const updated = await tx.order.update({ where: { id }, data });
     if (status === "payment_received") {
+      const confirmedAt = new Date();
       await tx.payment.updateMany({
-        where: { orderId: id, status: "pending" },
-        data: { status: "confirmed", confirmedAt: new Date() },
+        where: { orderId: id, status: { in: ["pending", "cash_on_delivery"] } },
+        data: { status: "confirmed", confirmedAt },
       });
+      const payment = await tx.payment.findFirst({ where: { orderId: id, status: "confirmed" }, orderBy: { confirmedAt: "desc" } });
+      if (payment) {
+        await tx.invoice.upsert({
+          where: { orderId: id },
+          create: {
+            orderId: id,
+            paymentId: payment.id,
+            invoiceNumber: `INV-${updated.orderNumber}`,
+            amountRupee: payment.amountRupee,
+          },
+          update: { paymentId: payment.id, amountRupee: payment.amountRupee, issuedAt: confirmedAt },
+        });
+      }
       await tx.recurringOrder.updateMany({
         where: { sourceOrderId: id, status: "pending_payment" },
         data: { status: "active" },
@@ -283,4 +303,3 @@ export async function upsertZone(input: {
     },
   });
 }
-
