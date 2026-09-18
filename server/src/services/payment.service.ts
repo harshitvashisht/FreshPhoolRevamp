@@ -131,10 +131,19 @@ async function confirmPayment(input: { razorpayOrderId: string; razorpayPaymentI
     include: { order: { include: { recurring: true, invoice: true } } },
   });
   if (!payment) throw new HttpError(404, "Payment order not found");
+  if (payment.status === "confirmed") {
+    if (!payment.order.invoice) throw new HttpError(409, "Payment confirmation is still being finalized");
+    return { invoice: payment.order.invoice, orderNumber: payment.order.orderNumber };
+  }
+  // A provider event may arrive after the customer chose COD or cancelled. Never
+  // let it reopen or pay an order whose backend state is no longer pending.
+  if (payment.status !== "pending" || payment.order.status !== "payment_pending") {
+    throw new HttpError(409, "This payment session is no longer eligible for confirmation");
+  }
 
   const invoice = await prisma.$transaction(async (tx) => {
-    await tx.payment.update({
-      where: { id: payment.id },
+    const paymentUpdate = await tx.payment.updateMany({
+      where: { id: payment.id, status: "pending" },
       data: {
         status: "confirmed",
         providerRef: input.razorpayPaymentId,
@@ -143,10 +152,12 @@ async function confirmPayment(input: { razorpayOrderId: string; razorpayPaymentI
         confirmedAt: new Date(),
       },
     });
-    await tx.order.update({
-      where: { id: payment.orderId },
+    if (paymentUpdate.count !== 1) throw new HttpError(409, "This payment was already changed");
+    const orderUpdate = await tx.order.updateMany({
+      where: { id: payment.orderId, status: "payment_pending" },
       data: { status: "payment_received", paidAt: new Date() },
     });
+    if (orderUpdate.count !== 1) throw new HttpError(409, "This order is no longer awaiting payment");
     await tx.recurringOrder.updateMany({
       where: { sourceOrderId: payment.orderId, status: "pending_payment" },
       data: { status: "active" },
@@ -190,7 +201,11 @@ export async function cancelOrder(orderNumber: string, memberId?: string) {
     throw new HttpError(409, "Only unpaid orders can be cancelled");
   }
   await prisma.$transaction(async (tx) => {
-    await tx.order.update({ where: { id: order.id }, data: { status: "cancelled" } });
+    const orderUpdate = await tx.order.updateMany({
+      where: { id: order.id, status: "payment_pending" },
+      data: { status: "cancelled" },
+    });
+    if (orderUpdate.count !== 1) throw new HttpError(409, "This order is no longer awaiting payment");
     await tx.payment.updateMany({
       where: { orderId: order.id, status: { in: ["pending", "cash_on_delivery"] } },
       data: { status: "failed", checkoutExpiresAt: null },
@@ -263,7 +278,13 @@ export async function processWebhook(rawBody: Buffer, signature: string | undefi
   const payment = event?.payload?.payment?.entity;
   if (!payment?.order_id || !payment?.id) return;
   if (event.event === "payment.captured" || event.event === "order.paid") {
-    await confirmPayment({ razorpayOrderId: payment.order_id, razorpayPaymentId: payment.id });
+    try {
+      await confirmPayment({ razorpayOrderId: payment.order_id, razorpayPaymentId: payment.id });
+    } catch (error) {
+      // A late/duplicate provider event for a cancelled, COD, or already-paid
+      // order is safe to acknowledge; retrying it cannot change order state.
+      if (!(error instanceof HttpError) || error.status !== 409) throw error;
+    }
   }
   if (event.event === "payment.failed") {
     await prisma.payment.updateMany({

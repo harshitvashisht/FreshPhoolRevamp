@@ -9,15 +9,15 @@ import * as payment from "../services/payment.service.js";
 export const ordersRouter = Router();
 
 const cartItem = z.object({
-  name: z.string().min(1),
-  qty: z.number().int().positive(),
-  unit: z.string().optional(),
-  price: z.number().nonnegative().optional(),
-  cadence: z.string().optional(),
-  duration_days: z.number().int().positive().optional(),
-  durationDays: z.number().int().positive().optional(),
-  offering: z.string().optional(),
-  size: z.string().optional(),
+  // Prices, units, and product IDs are deliberately never accepted from a browser.
+  // Zod strips legacy display-only fields such as `price` from older cart payloads.
+  name: z.string().trim().min(1).max(140),
+  qty: z.number().int().min(1).max(100),
+  cadence: z.enum(["one_time", "daily", "weekly", "monthly"]).optional(),
+  duration_days: z.number().int().min(1).max(365).optional(),
+  durationDays: z.number().int().min(1).max(365).optional(),
+  offering: z.enum(["puja_pack", "garland", "stem", "custom"]).optional(),
+  size: z.string().trim().min(1).max(40).optional(),
 });
 
 ordersRouter.post(
@@ -57,6 +57,7 @@ ordersRouter.post(
 ordersRouter.get(
   "/me",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     if (!req.user?.memberId) throw new HttpError(400, "Member profile required");
     const orders = await checkout.listMyOrders(req.user.memberId);
@@ -67,6 +68,7 @@ ordersRouter.get(
 ordersRouter.post(
   "/:orderNumber/payment-order",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
     res.json(await payment.createPaymentOrder(req.params.orderNumber, memberId));
@@ -76,6 +78,7 @@ ordersRouter.post(
 ordersRouter.post(
   "/:orderNumber/verify-payment",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const body = z
       .object({
@@ -92,6 +95,7 @@ ordersRouter.post(
 ordersRouter.post(
   "/:orderNumber/cash-on-delivery",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
     res.json(await payment.chooseCashOnDelivery(req.params.orderNumber, memberId));
@@ -101,6 +105,7 @@ ordersRouter.post(
 ordersRouter.post(
   "/:orderNumber/cancel",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
     res.json(await payment.cancelOrder(req.params.orderNumber, memberId));
@@ -110,6 +115,7 @@ ordersRouter.post(
 ordersRouter.get(
   "/:orderNumber/invoice",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
     res.json(await payment.getInvoice(req.params.orderNumber, memberId));
@@ -119,6 +125,7 @@ ordersRouter.get(
 ordersRouter.get(
   "/:orderNumber",
   requireAuth,
+  requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
     const order = await checkout.getOrderByNumber(req.params.orderNumber, memberId);

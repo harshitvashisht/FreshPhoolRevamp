@@ -1,4 +1,4 @@
-import { Cadence, Offering, type Prisma } from "@prisma/client";
+import { Cadence, Offering, ProductCategory, type Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../lib/httpError.js";
 
@@ -8,8 +8,6 @@ const PUJA_HINT =
 export type CartItem = {
   name: string;
   qty: number;
-  unit?: string;
-  price?: number;
   cadence?: string;
   duration_days?: number;
   durationDays?: number;
@@ -20,11 +18,6 @@ export type CartItem = {
 function asCadence(value: string | undefined): Cadence {
   if (value === "daily" || value === "weekly" || value === "monthly") return value;
   return "one_time";
-}
-
-function asOffering(value: string | undefined): Offering {
-  if (value === "puja_pack" || value === "garland" || value === "stem") return value;
-  return "custom";
 }
 
 function isRecurring(cadence: Cadence) {
@@ -48,6 +41,60 @@ function lineTotal(item: {
   if (!item.price) return 0;
   if (item.offering === "puja_pack") return item.price * item.qty;
   return item.price * item.qty * deliveries(item);
+}
+
+function displayProductName(rawName: string) {
+  // Colour choices are a storefront display concern. They map back to the base
+  // catalog product; neither arbitrary product names nor prices are trusted.
+  return rawName.replace(/\s*\([^)]*\)\s*$/, "").trim();
+}
+
+async function resolveCatalogItems(items: CartItem[]) {
+  const requestedNames = [...new Set(items.map((item) => item.offering === "puja_pack" ? "Daily Puja Pack" : displayProductName(item.name)))];
+  const products = await prisma.product.findMany({
+    where: { name: { in: requestedNames }, active: true },
+    include: { variants: true },
+  });
+  const byName = new Map(products.map((product) => [product.name, product]));
+
+  return items.map((raw) => {
+    const productName = raw.offering === "puja_pack" ? "Daily Puja Pack" : displayProductName(raw.name);
+    const product = byName.get(productName);
+    if (!product) throw new HttpError(400, `\"${productName}\" is unavailable. Refresh the shop and try again.`);
+
+    const cadence = asCadence(raw.cadence);
+    const durationDays = Number(raw.duration_days ?? raw.durationDays ?? 1) || 1;
+    const qty = Math.max(1, Number(raw.qty) || 1);
+    const offering: Offering = product.category === ProductCategory.PACK
+      ? "puja_pack"
+      : product.category === ProductCategory.GARLAND
+        ? "garland"
+        : "stem";
+    const variant = product.category === ProductCategory.PACK
+      // Puja packs are priced by size and duration; delivery cadence controls the
+      // fulfilment schedule, not the package price.
+      ? product.variants.find((row) => row.size === raw.size && row.durationDays === durationDays)
+      : undefined;
+    const price = variant?.priceRupee ?? product.priceRupee;
+    if (price === null || price === undefined || price <= 0) {
+      throw new HttpError(400, `\"${product.name}\" is awaiting an admin price and cannot be checked out yet.`);
+    }
+    if (product.category === ProductCategory.PACK && !variant) {
+      throw new HttpError(400, "That Puja Pack selection is no longer available. Refresh the shop and choose it again.");
+    }
+    return {
+      productId: product.id,
+      name: product.category === ProductCategory.PACK ? `Puja Pack · ${raw.size} · ${durationDays} days` : product.name,
+      qty,
+      unit: product.unit,
+      price,
+      cadence,
+      durationDays,
+      offering,
+      size: product.category === ProductCategory.PACK ? raw.size ?? null : null,
+      lineTotal: lineTotal({ price, qty, cadence, durationDays, offering }),
+    };
+  });
 }
 
 function orderKind(items: { cadence: Cadence }[]) {
@@ -92,33 +139,11 @@ export async function placeCheckout(input: {
   const member = await prisma.member.findUnique({ where: { id: input.memberId } });
   if (!member) throw new HttpError(401, "Member profile missing");
 
-  const normalized = input.items.map((raw) => {
-    const cadence = asCadence(raw.cadence);
-    const offering = asOffering(raw.offering);
-    const durationDays = Number(raw.duration_days ?? raw.durationDays ?? 1) || 1;
-    const qty = Math.max(1, Number(raw.qty) || 1);
-    const price = Number(raw.price) || 0;
-    return {
-      name: raw.name,
-      qty,
-      unit: raw.unit || "",
-      price,
-      cadence,
-      durationDays,
-      offering,
-      size: raw.size ?? null,
-      lineTotal: lineTotal({ price, qty, cadence, durationDays, offering }),
-    };
-  });
+  const normalized = await resolveCatalogItems(input.items);
 
   const subtotal = normalized.reduce((sum, i) => sum + i.lineTotal, 0);
   const kind = orderKind(normalized);
   const window = deliveryWindow(normalized);
-
-  const products = await prisma.product.findMany({
-    where: { name: { in: [...new Set(normalized.map((i) => i.name.split(" (")[0]))] } },
-  });
-  const byName = Object.fromEntries(products.map((p) => [p.name, p]));
 
   const orderNumber = await nextOrderNumber("FP");
   const subHead = `SUB-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-`;
@@ -161,7 +186,7 @@ export async function placeCheckout(input: {
         items: normalized as Prisma.InputJsonValue,
         lines: {
           create: normalized.map((i) => ({
-            productId: byName[i.name.split(" (")[0]]?.id ?? null,
+            productId: i.productId,
             name: i.name,
             qty: i.qty,
             unit: i.unit,
