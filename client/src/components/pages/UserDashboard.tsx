@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { DashShell, Gate } from "../dash/DashShell";
 import { useAuth } from "../../auth/AuthProvider";
 import { api, rupee, whenIst, type Address } from "../../lib/api";
+import { getToken } from "../../lib/api";
 
 type Order = {
   id: string;
@@ -59,6 +60,41 @@ function paymentLabel(order: Order) {
   if (payment.status === "cash_on_delivery") return "Cash on Delivery";
   if (payment.status === "confirmed") return "Paid online";
   return "Online payment pending";
+}
+
+function hasInvoice(order: Order) {
+  return order.payments?.some((payment) => payment.status === "confirmed") ?? false;
+}
+
+function InvoiceDownload({ orderNumber }: { orderNumber: string }) {
+  const [busy, setBusy] = useState(false);
+
+  async function download() {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderNumber)}/invoice?format=pdf`, {
+        headers: { Authorization: `Bearer ${getToken() || ""}` },
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Could not download invoice");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `FreshPhool-${orderNumber}-invoice.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not download invoice");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <button className="fp-icon-btn" type="button" onClick={() => void download()} disabled={busy} title="Download invoice PDF" aria-label={`Download invoice PDF for ${orderNumber}`}>
+    {busy ? "…" : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 20h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+  </button>;
 }
 
 function Overview() {
@@ -173,10 +209,21 @@ function Orders() {
                 <td>
                   <span className="fp-pill">{o.status.replaceAll("_", " ")}</span>
                 </td>
-                <td>
-                  {o.status === "payment_pending" ? <><a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(o.orderNumber)}`}>Complete payment</a><button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel(o)}>Cancel</button></> : null}
-                  {o.status === "payment_received" ? <a className="fp-btn fp-btn-ghost" href={`/pay?order=${encodeURIComponent(o.orderNumber)}`}>Download invoice</a> : null}
-                </td>
+<td>
+                    {o.status === "payment_pending" ? (
+                      <div className="fp-action-group">
+                        <a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(o.orderNumber)}`}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                          Complete payment
+                        </a>
+                        <button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel(o)}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : null}
+                    {hasInvoice(o) ? <InvoiceDownload orderNumber={o.orderNumber} /> : null}
+                  </td>
               </tr>
             ))}
             {!orders.length ? (
@@ -249,9 +296,20 @@ function OrderDetail() {
           </tbody>
         </table>
         {order.notes ? <p style={{ marginTop: 12 }}>Notes: {order.notes}</p> : null}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
-          {order.status === "payment_pending" ? <><a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(order.orderNumber)}`}>Complete payment</a><button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel()}>Cancel order</button></> : null}
-          {order.status === "payment_received" ? <a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(order.orderNumber)}`}>Download invoice</a> : null}
+        <div className="fp-action-group" style={{ marginTop: 16 }}>
+          {order.status === "payment_pending" ? (
+            <>
+              <a className="fp-btn fp-btn-primary" href={`/pay?order=${encodeURIComponent(order.orderNumber)}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                Complete payment
+              </a>
+              <button className="fp-btn fp-btn-ghost" type="button" onClick={() => void cancel()}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                Cancel order
+              </button>
+            </>
+          ) : null}
+          {hasInvoice(order) ? <InvoiceDownload orderNumber={order.orderNumber} /> : null}
         </div>
       </div>
     </>

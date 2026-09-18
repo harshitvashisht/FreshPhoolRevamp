@@ -38,6 +38,25 @@ const PUJA_PACK = {
     items: {},
     addresses: [],
 
+    STORAGE_KEY: 'fp_cart_v1',
+
+    init(){
+      try {
+        const saved = localStorage.getItem(this.STORAGE_KEY);
+        if(saved){
+          this.items = JSON.parse(saved);
+        }
+      } catch(_) {}
+      this.syncCardQuantities();
+      this.render();
+    },
+
+    save(){
+      try {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.items));
+      } catch(_) {}
+    },
+
     isRecurring(cadence){
       return cadence === 'daily' || cadence === 'weekly' || cadence === 'monthly';
     },
@@ -127,7 +146,9 @@ const PUJA_PACK = {
       } else {
         delete this.items[name];
       }
+      this.save();
       this.render();
+      if(qty > 0) this.triggerCartAnimation();
     },
 
     changeQty(name, amount){
@@ -136,13 +157,16 @@ const PUJA_PACK = {
       item.qty = Math.max(0, item.qty + amount);
       if(!item.qty) delete this.items[name];
       this.syncCardQuantities();
+      this.save();
       this.render();
+      if(amount > 0) this.triggerCartAnimation();
     },
 
     remove(name){
       if(!this.items[name]) return;
       delete this.items[name];
       this.syncCardQuantities();
+      this.save();
       this.render();
     },
 
@@ -170,6 +194,7 @@ const PUJA_PACK = {
           item.duration_days = duration_days;
         }
       });
+      this.save();
       this.render();
     },
 
@@ -182,6 +207,7 @@ const PUJA_PACK = {
         name, price, unit: 'pack', qty: 1, cadence,
         duration_days: days, offering: 'puja_pack', size
       };
+      this.save();
       this.render();
       this.openPanel();
     },
@@ -438,6 +464,18 @@ const PUJA_PACK = {
       } catch (e) {}
       this.closePanel();
       window.location.href = '/pay?order=' + encodeURIComponent(orderNumber);
+    },
+    triggerCartAnimation(){
+      const btn = document.querySelector('.nav-cart-btn');
+      const badge = document.getElementById('navCartBadge');
+      if(btn){
+        btn.classList.add('fp-adding');
+        setTimeout(() => btn.classList.remove('fp-adding'), 400);
+      }
+      if(badge){
+        badge.classList.add('fp-pulse');
+        setTimeout(() => badge.classList.remove('fp-pulse'), 300);
+      }
     }
   };
 
@@ -824,3 +862,4 @@ const PUJA_PACK = {
   if(typeof applyFlowerLore === "function") applyFlowerLore();
   fpPincode.bind();
   fpMarquee.init();
+  fpCart.init();

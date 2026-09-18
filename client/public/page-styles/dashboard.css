@@ -238,11 +238,109 @@
   background: var(--card);
 }
 
+.fp-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+.fp-icon-btn:hover { background: var(--card); }
+.fp-icon-btn:disabled { cursor: wait; opacity: .6; }
+.fp-icon-btn svg { width: 18px; height: 18px; }
+
 .fp-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+.fp-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 4px;
+  box-shadow: 0 4px 12px -4px rgba(31, 46, 35, 0.15);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.fp-action-group:hover {
+  box-shadow: 0 8px 20px -6px rgba(31, 46, 35, 0.25);
+  border-color: var(--sage);
+}
+
+.fp-action-group .fp-btn {
+  border-radius: 100px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+}
+
+.fp-action-group .fp-btn:active {
+  transform: scale(0.96);
+}
+
+.fp-action-group .fp-btn-primary {
+  background: var(--ember);
+  color: #fff;
+}
+
+.fp-action-group .fp-btn-primary:hover {
+  background: var(--ember-dark);
+  box-shadow: 0 4px 14px -4px rgba(193, 68, 14, 0.5);
+}
+
+.fp-dash a.fp-action-group .fp-btn-primary {
+  color: #fff;
+  text-decoration: none;
+}
+
+.fp-action-group .fp-btn-ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.fp-action-group .fp-btn-ghost:hover {
+  background: var(--white);
+  box-shadow: 0 2px 8px -2px rgba(31, 46, 35, 0.1);
+}
+
+.fp-action-group .fp-btn svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 480px) {
+  .fp-action-group {
+    flex-direction: column;
+    border-radius: 16px;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .fp-action-group .fp-btn {
+    width: 100%;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
 }
 
 .fp-stack {
