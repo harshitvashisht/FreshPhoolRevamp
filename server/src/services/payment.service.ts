@@ -10,6 +10,8 @@ type RazorpayOrder = {
   receipt: string;
 };
 
+const CHECKOUT_WINDOW_MS = 2 * 60 * 1000;
+
 function credentials() {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
     throw new HttpError(503, "Razorpay is not configured yet");
@@ -58,14 +60,16 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
     throw new HttpError(409, "Cash on Delivery is already selected for this order");
   }
 
+  const now = new Date();
   const existing = order.payments.find((payment) => payment.razorpayOrderId && payment.status === "pending");
-  if (existing?.razorpayOrderId) {
+  if (existing?.razorpayOrderId && existing.checkoutExpiresAt && existing.checkoutExpiresAt > now) {
     return {
       keyId: credentials().keyId,
       razorpayOrderId: existing.razorpayOrderId,
       amountPaise: existing.amountRupee * 100,
       currency: "INR",
       orderNumber: order.orderNumber,
+      expiresAt: existing.checkoutExpiresAt.toISOString(),
       customer: { name: order.member?.name ?? "FreshPhool customer", email: order.member?.email ?? undefined, contact: order.member?.phoneE164 ?? undefined },
     };
   }
@@ -79,11 +83,12 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
       notes: { freshphool_order: order.orderNumber },
     }),
   }) as RazorpayOrder;
+  const checkoutExpiresAt = new Date(Date.now() + CHECKOUT_WINDOW_MS);
 
-  const payment = order.payments[0]
+  const payment = (existing || order.payments.find((row) => row.status === "pending") || order.payments[0])
     ? await prisma.payment.update({
-        where: { id: order.payments[0].id },
-        data: { provider: "razorpay", razorpayOrderId: razorpayOrder.id, providerRef: razorpayOrder.id },
+        where: { id: (existing || order.payments.find((row) => row.status === "pending") || order.payments[0]).id },
+        data: { status: "pending", provider: "razorpay", razorpayOrderId: razorpayOrder.id, providerRef: razorpayOrder.id, checkoutExpiresAt },
       })
     : await prisma.payment.create({
         data: {
@@ -92,6 +97,7 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
           provider: "razorpay",
           razorpayOrderId: razorpayOrder.id,
           providerRef: razorpayOrder.id,
+          checkoutExpiresAt,
         },
       });
 
@@ -101,6 +107,7 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
     amountPaise: razorpayOrder.amount,
     currency: razorpayOrder.currency,
     orderNumber: order.orderNumber,
+    expiresAt: checkoutExpiresAt.toISOString(),
     customer: { name: order.member?.name ?? "FreshPhool customer", email: order.member?.email ?? undefined, contact: order.member?.phoneE164 ?? undefined },
   };
 }
@@ -165,7 +172,29 @@ export async function verifyCheckoutPayment(input: {
   }
   const payment = await prisma.payment.findUnique({ where: { razorpayOrderId: input.razorpayOrderId } });
   if (!payment || payment.orderId !== order.id) throw new HttpError(400, "Payment does not belong to this order");
+  if (order.status !== "payment_pending" || (payment.checkoutExpiresAt && payment.checkoutExpiresAt <= new Date())) {
+    throw new HttpError(410, "This payment session has expired. Start a new payment session from your order.");
+  }
   return confirmPayment(input);
+}
+
+export async function cancelOrder(orderNumber: string, memberId?: string) {
+  const order = await ownedOrder(orderNumber, memberId);
+  if (order.status !== "payment_pending") {
+    throw new HttpError(409, "Only unpaid orders can be cancelled");
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({ where: { id: order.id }, data: { status: "cancelled" } });
+    await tx.payment.updateMany({
+      where: { orderId: order.id, status: { in: ["pending", "cash_on_delivery"] } },
+      data: { status: "failed", checkoutExpiresAt: null },
+    });
+    await tx.recurringOrder.updateMany({
+      where: { sourceOrderId: order.id, status: "pending_payment" },
+      data: { status: "cancelled" },
+    });
+  });
+  return { orderNumber: order.orderNumber, status: "cancelled" };
 }
 
 export async function chooseCashOnDelivery(orderNumber: string, memberId?: string) {
