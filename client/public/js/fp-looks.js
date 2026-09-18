@@ -361,11 +361,16 @@ const PUJA_PACK = {
       const apt = document.getElementById('aptInput').value.trim();
       const block = document.getElementById('blockInput').value.trim();
       if(!apt || !block){ alert('Please enter your apartment and block / flat.'); return; }
+      // The API deliberately receives no prices or units: PostgreSQL resolves
+      // the active catalog product/variant and is the only price authority.
+      const checkoutItems = items.map(({name, qty, cadence, duration_days, offering, size}) => ({
+        name, qty, cadence, duration_days, offering, size
+      }));
       const payload = {
         community: apt,
         block_flat: block,
         addressId: document.getElementById('savedAddressSelect')?.value || undefined,
-        items,
+        items: checkoutItems,
         kind: this.kind(),
         delivery_window: items.some(i => /puja|jasmine|marigold|lotus|tulsi|bilva|betel|mango/i.test(i.name)) ? 'puja' : 'decorative',
         notes: null
@@ -402,7 +407,7 @@ const PUJA_PACK = {
           order_number: orderNumber,
           subscription_numbers: (checkout && (checkout.subscriptionNumbers || checkout.subscription_numbers)) || [],
           delivery_order_numbers: (checkout && (checkout.deliveryOrderNumbers || checkout.delivery_order_numbers)) || [],
-          items, subtotal: this.subtotal(),
+          items, subtotal: checkout.subtotalRupee,
           community: apt, block_flat: block
         }));
       } catch (e) {}

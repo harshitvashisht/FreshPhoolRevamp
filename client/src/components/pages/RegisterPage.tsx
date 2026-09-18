@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth, homeFor } from "../../auth/AuthProvider";
+import AuthLayout from "../auth/AuthLayout";
 
 export default function RegisterPage() {
   const { register, role, loading } = useAuth();
@@ -32,13 +33,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="fp-dash">
-      <div className="fp-card fp-auth">
-        <p className="fp-muted" style={{ letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700 }}>
-          Member
-        </p>
-        <h1 style={{ marginTop: 8 }}>Create account</h1>
-        <p className="fp-muted">For North Bangalore deliveries. Admin accounts are issued separately.</p>
+    <AuthLayout
+      eyebrow="Fresh mornings start here"
+      title="Create your member account"
+      description="Save your delivery details, track orders, and make every morning a little more beautiful."
+    >
         <form onSubmit={onSubmit}>
           <label htmlFor="name">Name</label>
           <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -50,22 +49,21 @@ export default function RegisterPage() {
           <input
             id="password"
             type="password"
-            minLength={6}
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <div style={{ marginTop: 16 }}>
+          <div className="fp-auth-submit">
             <button className="fp-btn fp-btn-primary" type="submit" disabled={busy}>
               {busy ? "Creating…" : "Create account"}
             </button>
           </div>
           {error ? <p className="fp-err">{error}</p> : null}
         </form>
-        <p className="fp-muted" style={{ marginTop: 18 }}>
+        <p className="fp-auth-switch">
           Already a member? <a href={safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"}>Sign in</a>
         </p>
-      </div>
-    </main>
+    </AuthLayout>
   );
 }

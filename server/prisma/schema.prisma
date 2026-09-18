@@ -113,6 +113,7 @@ model Address {
 
 model Product {
   id         String          @id @default(uuid())
+  sku        String?         @unique
   slug       String          @unique
   name       String
   category   ProductCategory
@@ -139,6 +140,21 @@ model ProductVariant {
 
   @@index([productId])
   @@map("product_variants")
+}
+
+model CatalogSku {
+  id             String   @id @default(uuid())
+  sku            String   @unique
+  sourceCategory String
+  name           String
+  color          String
+  unit           String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceCategory, name])
+  @@map("catalog_skus")
 }
 
 model DeliveryZone {

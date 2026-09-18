@@ -272,6 +272,12 @@ export async function listAllProducts() {
   });
 }
 
+export async function listCatalogSkus() {
+  return prisma.catalogSku.findMany({
+    orderBy: [{ sourceCategory: "asc" }, { name: "asc" }, { color: "asc" }],
+  });
+}
+
 export async function listAllZones() {
   return prisma.deliveryZone.findMany({ orderBy: { pincode: "asc" } });
 }

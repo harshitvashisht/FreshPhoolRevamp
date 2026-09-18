@@ -152,6 +152,11 @@
   color: #fff;
 }
 
+.fp-dash a.fp-btn-primary {
+  color: #fff;
+  text-decoration: none;
+}
+
 .fp-btn-ghost {
   background: transparent;
   border: 1.5px solid var(--line);
@@ -243,6 +248,86 @@
 .fp-stack {
   display: grid;
   gap: 16px;
+}
+
+/* Sign in and registration — visual layer only; authentication remains in React. */
+.fp-auth-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(360px, 1.06fr) minmax(420px, 0.94fr);
+  background: #fffdf8;
+}
+
+.fp-auth-story {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  padding: 44px clamp(38px, 6vw, 92px);
+  color: #fffdf8;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(43, 65, 39, .22), rgba(27, 45, 24, .86)), url('/images/life/hero-vase.jpg') center/cover;
+}
+
+.fp-auth-logo img { width: 178px; height: auto; filter: brightness(0) invert(1); }
+.fp-auth-story-copy { max-width: 540px; padding-bottom: 6vh; }
+.fp-auth-story-copy p, .fp-auth-eyebrow {
+  margin: 0 0 14px;
+  color: #e6c474;
+  letter-spacing: .14em;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.fp-auth-story-copy h2 {
+  margin: 0;
+  color: #fffdf8;
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(36px, 4.1vw, 62px);
+  font-weight: 500;
+  line-height: 1.06;
+}
+.fp-auth-story-copy span { display: block; margin-top: 20px; color: rgba(255,253,248,.8); font-size: 14px; }
+
+.fp-auth-panel {
+  display: grid;
+  place-items: center;
+  padding: 44px clamp(28px, 6vw, 90px);
+  background: radial-gradient(circle at 88% 8%, #fff3d7 0, transparent 28%), #fffdf8;
+}
+.fp-auth-mobile-logo { display: none; }
+.fp-auth-card { width: min(100%, 430px); }
+.fp-auth-card h1 {
+  margin: 0;
+  color: #243c27;
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(34px, 3vw, 46px);
+  font-weight: 500;
+  line-height: 1.08;
+}
+.fp-auth-description { margin: 14px 0 29px; color: #667161; font-size: 15px; line-height: 1.65; }
+.fp-auth-card form { display: grid; gap: 8px; }
+.fp-auth-card label { margin-top: 7px; color: #435542; font-size: 13px; font-weight: 700; }
+.fp-auth-card input {
+  border-color: #d7ddcf;
+  border-radius: 10px;
+  padding: 13px 14px;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.fp-auth-card input:focus { outline: 0; border-color: #637d54; box-shadow: 0 0 0 3px rgba(99,125,84,.14); }
+.fp-auth-submit { margin-top: 14px; }
+.fp-auth-submit .fp-btn { width: 100%; min-height: 48px; justify-content: center; border-radius: 10px; }
+.fp-auth-switch { margin: 23px 0 0; color: #667161; font-size: 14px; text-align: center; }
+.fp-auth-switch a { color: #405d34; font-weight: 700; text-decoration: none; }
+.fp-auth-switch a:hover { text-decoration: underline; }
+
+@media (max-width: 840px) {
+  .fp-auth-page { display: block; }
+  .fp-auth-story { display: none; }
+  .fp-auth-panel { min-height: 100vh; padding: 34px 24px; align-content: center; }
+  .fp-auth-mobile-logo { display: block; position: absolute; top: 28px; left: 28px; }
+  .fp-auth-mobile-logo img { width: 144px; height: auto; }
 }
 
 @media (max-width: 800px) {

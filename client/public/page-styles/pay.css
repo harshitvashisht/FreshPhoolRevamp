@@ -18,3 +18,17 @@
   .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:100px;font-weight:700;text-decoration:none;font-size:14px;}
   .btn-primary{background:var(--ember);color:#fff;}
   .btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);}
+  .payment-options{margin-top:28px;display:grid;gap:12px;}
+  .payment-options h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);}
+  .payment-option{width:100%;display:flex;align-items:center;gap:13px;padding:16px;border:1.5px solid var(--line);border-radius:18px;background:var(--white);color:var(--ink);text-align:left;cursor:pointer;font:inherit;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;}
+  .payment-option:hover:not(:disabled){transform:translateY(-2px);border-color:var(--ember);box-shadow:0 10px 24px rgba(76,44,22,.12);}
+  .payment-option:disabled{cursor:not-allowed;opacity:.66;}
+  .payment-option-online{background:linear-gradient(135deg,#C1440E,#E4692A);border-color:#C1440E;color:#fff;}
+  .payment-option-online:hover:not(:disabled){border-color:#A93609;box-shadow:0 12px 28px rgba(193,68,14,.28);}
+  .payment-option-icon{width:36px;height:36px;display:inline-flex;flex:none;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.2);font-family:'Fraunces',serif;font-size:22px;font-weight:600;}
+  .payment-option-cod .payment-option-icon{background:rgba(193,68,14,.1);color:var(--ember);}
+  .payment-option-copy{display:grid;gap:3px;flex:1;min-width:0;}
+  .payment-option-copy strong{font-size:15px;}
+  .payment-option-copy small{font-size:12px;line-height:1.35;opacity:.82;}
+  .payment-option-arrow{font-size:22px;line-height:1;font-weight:500;}
+  .payment-expiry{margin:0;padding:10px 12px;border-radius:12px;background:#FFF1E8;color:#9A390E;font-size:13px;font-weight:600;}

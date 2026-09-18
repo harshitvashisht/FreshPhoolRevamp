@@ -61,6 +61,7 @@ type MemberRow = {
 
 type Product = {
   id: string;
+  sku?: string | null;
   slug: string;
   name: string;
   category: "STEM" | "PUJA" | "GARLAND" | "PACK";
@@ -68,6 +69,16 @@ type Product = {
   priceRupee: number | null;
   active: boolean;
   sortOrder: number;
+};
+
+type CatalogSku = {
+  id: string;
+  sku: string;
+  sourceCategory: string;
+  name: string;
+  color: string;
+  unit: string;
+  active: boolean;
 };
 
 type Zone = {
@@ -378,6 +389,7 @@ function MembersPage() {
         <table className="fp-table">
           <thead>
             <tr>
+              <th>SKU</th>
               <th>Name</th>
               <th>Contact</th>
               <th>Orders</th>
@@ -408,6 +420,7 @@ function MembersPage() {
 
 function CatalogPage() {
   const [rows, setRows] = useState<Product[]>([]);
+  const [skus, setSkus] = useState<CatalogSku[]>([]);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     slug: "",
@@ -418,7 +431,9 @@ function CatalogPage() {
   });
 
   async function load() {
-    setRows(await api<Product[]>("/admin/products"));
+    const [products, importedSkus] = await Promise.all([api<Product[]>("/admin/products"), api<CatalogSku[]>("/admin/skus")]);
+    setRows(products);
+    setSkus(importedSkus);
   }
 
   useEffect(() => {
@@ -477,6 +492,7 @@ function CatalogPage() {
           <tbody>
             {rows.map((p) => (
               <tr key={p.id}>
+                <td>{p.sku ? <code>{p.sku}</code> : "—"}</td>
                 <td>
                   {p.name}
                   <div className="fp-muted">{p.slug}</div>
@@ -503,6 +519,14 @@ function CatalogPage() {
               </tr>
             ))}
           </tbody>
+        </table>
+      </div>
+      <div className="fp-card" style={{ marginTop: 16, overflowX: "auto" }}>
+        <h2 style={{ fontSize: 22 }}>Imported SKUs</h2>
+        <p className="fp-muted" style={{ marginTop: 6 }}>{skus.length} unique SKU codes from Freshphool_SKU-V1.xlsx. Prices remain separate because the source sheet has no pricing.</p>
+        <table className="fp-table" style={{ marginTop: 12 }}>
+          <thead><tr><th>SKU</th><th>Category</th><th>Product</th><th>Colour</th><th>Unit</th></tr></thead>
+          <tbody>{skus.map((sku) => <tr key={sku.id}><td><code>{sku.sku}</code></td><td>{sku.sourceCategory}</td><td>{sku.name}</td><td>{sku.color}</td><td>{sku.unit}</td></tr>)}</tbody>
         </table>
       </div>
       <form className="fp-card fp-form" style={{ marginTop: 16 }} onSubmit={create}>

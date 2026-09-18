@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { catalogSkus } from "./skuCatalog.js";
 
 const prisma = new PrismaClient();
 
@@ -48,6 +49,33 @@ const zones = [
   { pincode: "560054", locality: "Mathikere" },
   { pincode: "560022", locality: "Yeshwanthpur" },
 ];
+
+const pricedSkuProducts = catalogSkus.flatMap((sku, index) => {
+  const priceByName: Record<string, number> = {
+    "Rose": 15,
+    "Gerbera": 20,
+    "Carnation": 20,
+    "Chrysanthemum": 30,
+    "Dahlias": 30,
+    "Gladiolus": 30,
+    "Asiatic Lily": 40,
+    "Oriental Lily": 80,
+    "Sunflower": 120,
+    "Baby's Breath": 50,
+  };
+  const priceRupee = sku.sourceCategory === "Decorative Flowers" ? priceByName[sku.name] : undefined;
+  if (priceRupee === undefined) return [];
+  return [{
+    sku: sku.sku,
+    slug: sku.sku.toLowerCase(),
+    name: `${sku.name} — ${sku.color}`,
+    category: "STEM" as const,
+    unit: sku.unit === "Small/Medium/Large Bunch" ? "bunch" : sku.unit.toLowerCase(),
+    priceRupee,
+    active: true,
+    sortOrder: 100 + index,
+  }];
+});
 
 async function main() {
   const adminEmail = (process.env.ADMIN_EMAIL || "admin@freshphool.com").toLowerCase();
@@ -124,7 +152,23 @@ async function main() {
     });
   }
 
-  console.log("Seed complete");
+  for (const sku of catalogSkus) {
+    await prisma.catalogSku.upsert({
+      where: { sku: sku.sku },
+      update: sku,
+      create: sku,
+    });
+  }
+
+  for (const product of pricedSkuProducts) {
+    await prisma.product.upsert({
+      where: { sku: product.sku },
+      update: product,
+      create: product,
+    });
+  }
+
+  console.log(`Seed complete (${catalogSkus.length} unique SKUs imported, ${pricedSkuProducts.length} priced SKU products added)`);
   console.log(`Admin login: ${adminEmail}`);
 }
 

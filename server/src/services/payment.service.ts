@@ -62,14 +62,20 @@ export async function createPaymentOrder(orderNumber: string, memberId?: string)
 
   const now = new Date();
   const existing = order.payments.find((payment) => payment.razorpayOrderId && payment.status === "pending");
-  if (existing?.razorpayOrderId && existing.checkoutExpiresAt && existing.checkoutExpiresAt > now) {
+  if (existing?.razorpayOrderId) {
+    const checkoutExpiresAt = existing.checkoutExpiresAt && existing.checkoutExpiresAt > now
+      ? existing.checkoutExpiresAt
+      : new Date(Date.now() + CHECKOUT_WINDOW_MS);
+    if (!existing.checkoutExpiresAt || existing.checkoutExpiresAt <= now) {
+      await prisma.payment.update({ where: { id: existing.id }, data: { checkoutExpiresAt } });
+    }
     return {
       keyId: credentials().keyId,
       razorpayOrderId: existing.razorpayOrderId,
       amountPaise: existing.amountRupee * 100,
       currency: "INR",
       orderNumber: order.orderNumber,
-      expiresAt: existing.checkoutExpiresAt.toISOString(),
+      expiresAt: checkoutExpiresAt.toISOString(),
       customer: { name: order.member?.name ?? "FreshPhool customer", email: order.member?.email ?? undefined, contact: order.member?.phoneE164 ?? undefined },
     };
   }
@@ -225,15 +231,7 @@ export async function chooseCashOnDelivery(orderNumber: string, memberId?: strin
       },
     });
     if (!updated.count) {
-      await tx.payment.create({
-        data: {
-          orderId: order.id,
-          amountRupee: order.subtotalRupee,
-          status: "cash_on_delivery",
-          provider: "cash_on_delivery",
-          providerRef: `COD-${order.orderNumber}`,
-        },
-      });
+      throw new HttpError(409, "This order no longer has a pending payment to update");
     }
   });
 
@@ -241,7 +239,7 @@ export async function chooseCashOnDelivery(orderNumber: string, memberId?: strin
     orderNumber: order.orderNumber,
     amountRupee: order.subtotalRupee,
     paymentMethod: "cash_on_delivery",
-    message: "Order placed. Please keep the exact amount ready for delivery.",
+    message: "Cash on Delivery selected for this order. Please keep the exact amount ready for delivery.",
   };
 }
 
