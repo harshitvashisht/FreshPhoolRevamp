@@ -41,7 +41,7 @@ async function razorpay(path: string, init: RequestInit = {}) {
 async function ownedOrder(orderNumber: string, memberId?: string) {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
-    include: { member: true, payments: { orderBy: { createdAt: "desc" } }, invoice: true },
+    include: { member: true, payments: { orderBy: { createdAt: "desc" } }, invoice: true, recurring: true },
   });
   if (!order) throw new HttpError(404, "Order not found");
   if (memberId && order.memberId !== memberId) throw new HttpError(403, "Forbidden");
@@ -225,6 +225,9 @@ export async function chooseCashOnDelivery(orderNumber: string, memberId?: strin
   }
   if (order.subtotalRupee <= 0) {
     throw new HttpError(400, "This order has items that need a price confirmation");
+  }
+  if (order.recurring && order.recurring.length > 0) {
+    throw new HttpError(409, "Subscriptions require online payment. Cash on Delivery is not available for recurring orders.");
   }
 
   if (order.payments.some((payment) => payment.status === "cash_on_delivery")) {

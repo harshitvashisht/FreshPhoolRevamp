@@ -5,6 +5,7 @@ import { HttpError } from "../lib/httpError.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import * as checkout from "../services/checkout.service.js";
 import * as payment from "../services/payment.service.js";
+import { invoicePdf } from "../lib/invoicePdf.js";
 
 export const ordersRouter = Router();
 
@@ -118,7 +119,18 @@ ordersRouter.get(
   requireRole("MEMBER", "ADMIN"),
   asyncHandler(async (req, res) => {
     const memberId = req.user?.role === "ADMIN" ? undefined : req.user?.memberId ?? undefined;
-    res.json(await payment.getInvoice(req.params.orderNumber, memberId));
+    const invoice = await payment.getInvoice(req.params.orderNumber, memberId);
+    if (req.query.format === "pdf") {
+      const filename = `FreshPhool-${invoice.invoiceNumber}.pdf`;
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      });
+      res.send(invoicePdf(invoice));
+      return;
+    }
+    res.json(invoice);
   }),
 );
 
