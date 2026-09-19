@@ -14,6 +14,7 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().min(1).optional(),
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  REDIS_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
