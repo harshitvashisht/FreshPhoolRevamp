@@ -10,14 +10,6 @@ type InvoiceData = {
     lines: { name: string; qty: number; unit: string; unitPrice: number; lineTotal: number }[];
     member: { name: string; email: string | null; phoneE164: string } | null;
   };
-  payment?: {
-    provider: string;
-    status: string;
-    providerRef?: string | null;
-    razorpayPaymentId?: string | null;
-    razorpayOrderId?: string | null;
-    confirmedAt?: Date | null;
-  } | null;
 };
 
 function escapePdf(value: string) {
@@ -33,12 +25,6 @@ export function invoicePdf(invoice: InvoiceData) {
   const issued = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(invoice.issuedAt);
   const member = invoice.order.member;
   const lines = invoice.order.lines.slice(0, 22);
-  const payment = invoice.payment;
-  const paidAt = payment?.confirmedAt ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(payment.confirmedAt) : "";
-  const paymentMethod = payment?.provider === "razorpay" ? "Online (Razorpay)" : payment?.provider === "cash_on_delivery" ? "Cash on Delivery" : payment?.provider || "—";
-  const transactionId = payment?.razorpayPaymentId || payment?.providerRef || "—";
-
-  const paidAtText = paidAt ? text(400, 600, paidAt, 9) : "";
   const commands = [
     "1 1 1 rg 0 0 595 842 re f",
     "0.14 0.24 0.15 rg",
@@ -58,17 +44,11 @@ export function invoicePdf(invoice: InvoiceData) {
     text(300, 693, invoice.order.community, 10),
     text(300, 678, invoice.order.blockFlat, 10),
     text(48, 635, `Order: ${invoice.order.orderNumber}`, 10, "F2"),
-    // Payment info section
-    "0.9 0.95 0.9 0.5 w 48 630 m 547 630 l S",
-    text(48, 615, "Payment Details", 10, "F2"),
-    text(48, 600, `Method: ${paymentMethod}`, 9),
-    text(200, 600, `Transaction ID: ${transactionId}`, 9),
-    paidAtText,
-    "0.14 0.24 0.15 rg 48 580 499 22 re f",
+    "0.14 0.24 0.15 rg 48 610 499 22 re f",
     "1 1 1 rg",
-    text(58, 587, "Item", 9, "F2"),
-    text(385, 587, "Qty", 9, "F2"),
-    text(455, 587, "Amount", 9, "F2"),
+    text(58, 617, "Item", 9, "F2"),
+    text(385, 617, "Qty", 9, "F2"),
+    text(455, 617, "Amount", 9, "F2"),
     "0.14 0.24 0.15 rg",
   ];
 
