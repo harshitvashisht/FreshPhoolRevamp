@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DashShell, Gate } from "../dash/DashShell";
 import { api, rupee, whenIst } from "../../lib/api";
+import * as XLSX from "xlsx";
 
 type Kpis = {
   orders: number;
@@ -700,11 +701,15 @@ function ExportPage() {
       const data = await api<{ rows: unknown[] }>(
         `/admin/export?dataset=${dataset}&from=${from}&to=${to}`,
       );
-      const blob = new Blob([JSON.stringify(data.rows, null, 2)], { type: "application/json" });
+      const worksheet = XLSX.utils.json_to_sheet(data.rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, dataset);
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${dataset}-${from}-to-${to}.json`;
+      a.download = `${dataset}-${from}-to-${to}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -729,7 +734,7 @@ function ExportPage() {
         </select>
         <div style={{ marginTop: 14 }}>
           <button className="fp-btn fp-btn-primary" type="button" onClick={() => void download()}>
-            Download JSON
+            Download Excel
           </button>
         </div>
         {error ? <p className="fp-err">{error}</p> : null}

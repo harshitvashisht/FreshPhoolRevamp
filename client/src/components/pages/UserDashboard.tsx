@@ -501,6 +501,8 @@ function Account() {
   const [phone, setPhone] = useState(profile?.phoneE164 || "");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -512,6 +514,23 @@ function Account() {
       setMsg("Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save");
+    }
+  }
+
+  async function deleteAccount() {
+    if (!window.confirm("Are you sure you want to permanently delete your account? This action cannot be undone. All your orders, subscriptions, and addresses will be deleted.")) {
+      return;
+    }
+    setDeleting(true);
+    setError("");
+    try {
+      await api("/auth/account", { method: "DELETE" });
+      localStorage.removeItem("fp.accessToken");
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -537,6 +556,21 @@ function Account() {
         <h2 style={{ fontSize: 18 }}>Sign out</h2>
         <p className="fp-muted">Sign out of this device.</p>
         <button className="fp-btn fp-btn-ghost" type="button" onClick={logout}>Log out</button>
+      </div>
+      <div className="fp-card" style={{ marginTop: 16, borderColor: "var(--ember)", background: "#fff5f0" }}>
+        <h2 style={{ fontSize: 18, color: "var(--ember)" }}>Delete Account</h2>
+        <p className="fp-muted" style={{ color: "var(--ink-soft)" }}>
+          Permanently delete your account and all associated data. This cannot be undone.
+        </p>
+        <button
+          className="fp-btn fp-btn-danger"
+          type="button"
+          onClick={deleteAccount}
+          disabled={deleting}
+          style={{ marginTop: 8 }}
+        >
+          {deleting ? "Deleting…" : "Delete my account permanently"}
+        </button>
       </div>
     </>
   );

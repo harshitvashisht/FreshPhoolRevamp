@@ -95,12 +95,7 @@ const PUJA_PACK = {
       const tag = card.querySelector('.qty-color-tag');
       if(tag) tag.textContent = swatchBtn.dataset.color;
       const valEl = card.querySelector('.step-val');
-      const previousQty = Math.max(0, parseInt((previous && previous.dataset.qty) || valEl.textContent || '0', 10) || 0);
-      if(previous && previous !== swatchBtn){
-        delete this.items[`${card.dataset.name} (${previous.dataset.color})`];
-      }
-      const qty = Math.max(0, parseInt(swatchBtn.dataset.qty || String(previousQty), 10) || 0);
-      swatchBtn.dataset.qty = qty;
+      const qty = Math.max(0, parseInt(swatchBtn.dataset.qty || '0', 10) || 0);
       valEl.textContent = qty;
       if(qty > 0) this.set(`${card.dataset.name} (${swatchBtn.dataset.color})`, card, qty);
       else this.render();
@@ -172,6 +167,11 @@ const PUJA_PACK = {
 
     syncCardQuantities(){
       document.querySelectorAll('.prod-card').forEach(card => {
+        card.querySelectorAll('.swatch').forEach(swatch => {
+          const itemName = `${card.dataset.name} (${swatch.dataset.color})`;
+          const quantity = this.items[itemName]?.qty || 0;
+          swatch.dataset.qty = quantity;
+        });
         const activeSwatch = card.querySelector('.swatch.active');
         const itemName = activeSwatch
           ? `${card.dataset.name} (${activeSwatch.dataset.color})`
@@ -179,7 +179,6 @@ const PUJA_PACK = {
         const quantity = this.items[itemName]?.qty || 0;
         const value = card.querySelector('.step-val');
         if(value) value.textContent = quantity;
-        if(activeSwatch) activeSwatch.dataset.qty = quantity;
       });
     },
 
