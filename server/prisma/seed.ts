@@ -1,4 +1,9 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, "../../.env") });
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { catalogSkus } from "./skuCatalog.js";
@@ -92,8 +97,8 @@ const pricedSkuProducts = catalogSkus.flatMap((sku, index) => {
 });
 
 async function main() {
-  const adminEmail = (process.env.ADMIN_EMAIL || "admin@freshphool.com").toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || "freshPhool@Vivek";
+  const adminEmail = (process.env.ADMIN_EMAIL );
+  const adminPassword = process.env.ADMIN_PASSWORD || "";
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   await prisma.user.upsert({

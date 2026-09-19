@@ -1,6 +1,7 @@
 import type { OrderStatus, RecurringStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../lib/httpError.js";
+import { logAudit, type AuditAction } from "./audit.service.js";
 
 const ORDER_LABEL: Record<OrderStatus, string> = {
   payment_pending: "Payment Pending",
@@ -129,7 +130,7 @@ export async function listOpsBoard() {
   };
 }
 
-export async function patchOrderStatus(id: string, statusLabel: string) {
+export async function patchOrderStatus(id: string, statusLabel: string, adminId?: string) {
   const status = LABEL_TO_STATUS[statusLabel] ?? (statusLabel as OrderStatus);
   if (!ORDER_LABEL[status as OrderStatus]) {
     throw new HttpError(400, "Unknown order status");
@@ -138,6 +139,7 @@ export async function patchOrderStatus(id: string, statusLabel: string) {
   if (status === "payment_received") data.paidAt = new Date();
 
   const order = await prisma.$transaction(async (tx) => {
+    const existing = await tx.order.findUnique({ where: { id } });
     const updated = await tx.order.update({ where: { id }, data });
     if (status === "payment_received") {
       const confirmedAt = new Date();
@@ -163,6 +165,19 @@ export async function patchOrderStatus(id: string, statusLabel: string) {
         data: { status: "active" },
       });
     }
+    if (adminId) {
+      await logAudit({
+        adminId,
+        action: "ORDER_STATUS_CHANGED",
+        targetType: "order",
+        targetId: id,
+        metadata: {
+          orderNumber: updated.orderNumber,
+          previousStatus: existing?.status,
+          newStatus: status,
+        },
+      });
+    }
     return updated;
   });
   return serializeOrder(order);
@@ -171,11 +186,28 @@ export async function patchOrderStatus(id: string, statusLabel: string) {
 export async function patchRecurring(
   id: string,
   body: { status?: RecurringStatus; qty?: number },
+  adminId?: string,
 ) {
+  const existing = await prisma.recurringOrder.findUnique({ where: { id } });
   const data: { status?: RecurringStatus; qty?: number } = {};
   if (body.status) data.status = body.status;
   if (typeof body.qty === "number") data.qty = Math.max(1, body.qty);
   const row = await prisma.recurringOrder.update({ where: { id }, data });
+  if (adminId) {
+    await logAudit({
+      adminId,
+      action: "RECURRING_STATUS_CHANGED",
+      targetType: "recurring",
+      targetId: id,
+      metadata: {
+        subscriptionNumber: row.subscriptionNumber,
+        previousStatus: existing?.status,
+        newStatus: row.status,
+        previousQty: existing?.qty,
+        newQty: row.qty,
+      },
+    });
+  }
   return row;
 }
 
@@ -319,3 +351,6 @@ export async function upsertZone(input: {
     },
   });
 }
+
+// Re-export audit functions for admin routes
+export { getAuditLogs, getAuditLogCount } from "./audit.service.js";

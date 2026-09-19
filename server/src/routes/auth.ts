@@ -1,11 +1,41 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { requireAuth } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import * as auth from "../services/auth.service.js";
 
+declare module "express" {
+  interface Response {
+    cookie(name: string, val: string, options: CookieOptions): this;
+    clearCookie(name: string, options: CookieOptions): this;
+  }
+  interface CookieOptions {
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: "lax" | "strict" | "none";
+    maxAge?: number;
+    path?: string;
+    domain?: string;
+  }
+}
+
 export const authRouter = Router();
+
+function setAuthCookie(res: Response, token: string) {
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("fp_token", token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "lax" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+}
+
+function clearAuthCookie(res: Response) {
+  res.clearCookie("fp_token", { path: "/" });
+}
 
 authRouter.post(
   "/register",
@@ -20,7 +50,8 @@ authRouter.post(
       })
       .parse(req.body);
     const session = await auth.registerMember(body);
-    res.status(201).json(session);
+    setAuthCookie(res, session.accessToken);
+    res.status(201).json({ user: session.user });
   }),
 );
 
@@ -35,7 +66,16 @@ authRouter.post(
       })
       .parse(req.body);
     const session = await auth.login(body.email, body.password);
-    res.json(session);
+    setAuthCookie(res, session.accessToken);
+    res.json({ user: session.user });
+  }),
+);
+
+authRouter.post(
+  "/logout",
+  asyncHandler(async (_req, res) => {
+    clearAuthCookie(res);
+    res.json({ success: true });
   }),
 );
 

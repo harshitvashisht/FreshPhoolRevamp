@@ -12,14 +12,15 @@ declare global {
   }
 }
 
-function bearer(req: Request) {
+function getToken(req: Request): string | null {
+  if (req.cookies?.fp_token) return req.cookies.fp_token;
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return null;
-  return header.slice(7);
+  if (header?.startsWith("Bearer ")) return header.slice(7);
+  return null;
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
-  const token = bearer(req);
+  const token = getToken(req);
   if (!token) throw new HttpError(401, "Missing access token");
   try {
     const claims = verifyToken(token);

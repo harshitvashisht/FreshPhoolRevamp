@@ -83,6 +83,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   member       Member?
+  auditLogs    AuditLog[]
 
   @@map("users")
 }
@@ -299,4 +300,21 @@ model RecurringOrder {
   @@index([memberId])
   @@index([status])
   @@map("recurring_orders")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }

@@ -20,7 +20,7 @@ adminRouter.patch(
   "/orders/:id",
   asyncHandler(async (req, res) => {
     const body = z.object({ status: z.string().min(1) }).parse(req.body);
-    res.json(await admin.patchOrderStatus(req.params.id, body.status));
+    res.json(await admin.patchOrderStatus(req.params.id, body.status, req.user!.sub));
   }),
 );
 
@@ -33,7 +33,7 @@ adminRouter.patch(
         qty: z.number().int().positive().optional(),
       })
       .parse(req.body);
-    res.json(await admin.patchRecurring(req.params.id, body));
+    res.json(await admin.patchRecurring(req.params.id, body, req.user!.sub));
   }),
 );
 
@@ -80,6 +80,28 @@ adminRouter.get(
   "/requests",
   asyncHandler(async (_req, res) => {
     res.json(await admin.listProductRequests());
+  }),
+);
+
+adminRouter.get(
+  "/audit-logs",
+  asyncHandler(async (req, res) => {
+    const query = z
+      .object({
+        adminId: z.string().uuid().optional(),
+        action: z.string().optional(),
+        from: z.string().datetime().optional(),
+        to: z.string().datetime().optional(),
+        limit: z.coerce.number().int().positive().max(500).default(100),
+        offset: z.coerce.number().int().min(0).default(0),
+      })
+      .parse(req.query);
+    const { adminId, action, from, to, limit, offset } = query;
+    const [logs, total] = await Promise.all([
+      admin.getAuditLogs({ adminId, action: action as any, from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined, limit, offset }),
+      admin.getAuditLogCount({ adminId, action: action as any, from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined }),
+    ]);
+    res.json({ logs, total, limit, offset });
   }),
 );
 
