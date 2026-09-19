@@ -73,6 +73,7 @@ export default function PayIndexPage() {
         key: paymentOrder.keyId, amount: paymentOrder.amountPaise, currency: paymentOrder.currency,
         name: "FreshPhool", description: `Order ${paymentOrder.orderNumber}`, order_id: paymentOrder.razorpayOrderId,
         prefill: paymentOrder.customer, theme: { color: "#C1440E" }, modal: { ondismiss: () => setBusy(false) },
+        method: { upi: true, card: true, netbanking: true, wallet: true, emi: true },
         handler: async (response: Record<string, string>) => {
           try {
             await api(`/orders/${encodeURIComponent(orderNumber)}/verify-payment`, { method: "POST", body: JSON.stringify({ razorpayOrderId: response.razorpay_order_id, razorpayPaymentId: response.razorpay_payment_id, razorpaySignature: response.razorpay_signature }) });
