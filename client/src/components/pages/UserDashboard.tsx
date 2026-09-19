@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DashShell, Gate } from "../dash/DashShell";
 import { useAuth } from "../../auth/AuthProvider";
-import { api, rupee, whenIst, type Address } from "../../lib/api";
-import { getToken } from "../../lib/api";
+import { api, logout as apiLogout, rupee, whenIst, type Address } from "../../lib/api";
 
 type Order = {
   id: string;
@@ -73,7 +72,7 @@ function InvoiceDownload({ orderNumber }: { orderNumber: string }) {
     setBusy(true);
     try {
       const response = await fetch(`/api/orders/${encodeURIComponent(orderNumber)}/invoice?format=pdf`, {
-        headers: { Authorization: `Bearer ${getToken() || ""}` },
+        credentials: "include",
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -525,7 +524,7 @@ function Account() {
     setError("");
     try {
       await api("/auth/account", { method: "DELETE" });
-      localStorage.removeItem("fp.accessToken");
+      await apiLogout();
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete account");

@@ -1,5 +1,3 @@
-const TOKEN_KEY = "fp.accessToken";
-
 export type Role = "MEMBER" | "ADMIN";
 
 export type SessionUser = {
@@ -32,24 +30,13 @@ export type Address = {
   isDefault: boolean;
 };
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setToken(token: string | null) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
-  if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`/api${path}`, { ...init, headers });
+  const res = await fetch(`/api${path}`, { ...init, headers, credentials: "include" });
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
@@ -57,6 +44,10 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(typeof message === "string" ? message : "Request failed");
   }
   return data as T;
+}
+
+export async function logout() {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
 }
 
 export function rupee(n: number) {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api, getToken, setToken, type Profile, type Role, type SessionUser } from "../lib/api";
+import { api, logout as apiLogout, type Profile, type Role, type SessionUser } from "../lib/api";
 
 type AuthState = {
   loading: boolean;
@@ -14,11 +14,9 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null);
 
 async function loadProfile(): Promise<Profile | null> {
-  if (!getToken()) return null;
   try {
     return await api<Profile>("/auth/me");
   } catch {
-    setToken(null);
     return null;
   }
 }
@@ -44,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: profile?.role ?? null,
       refresh,
       logout: () => {
-        setToken(null);
+        apiLogout();
         setProfile(null);
         window.location.href = "/login";
       },
@@ -53,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: "POST",
           body: JSON.stringify({ email, password }),
         });
-        setToken(session.accessToken);
         const next = await api<Profile>("/auth/me");
         setProfile(next);
         return next;
@@ -63,7 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: "POST",
           body: JSON.stringify(input),
         });
-        setToken(session.accessToken);
         const next = await api<Profile>("/auth/me");
         setProfile(next);
         return next;
