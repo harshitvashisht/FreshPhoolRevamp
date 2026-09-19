@@ -120,3 +120,17 @@ export async function me(userId: string) {
     member: user.member,
   };
 }
+
+export async function deleteAccount(userId: string) {
+  await prisma.$transaction(async (tx) => {
+    const member = await tx.member.findUnique({ where: { userId } });
+    if (member) {
+      await tx.address.deleteMany({ where: { memberId: member.id } });
+      await tx.recurringOrder.deleteMany({ where: { memberId: member.id } });
+      await tx.order.deleteMany({ where: { memberId: member.id } });
+      await tx.productRequest.deleteMany({ where: { memberId: member.id } });
+      await tx.member.delete({ where: { id: member.id } });
+    }
+    await tx.user.delete({ where: { id: userId } });
+  });
+}

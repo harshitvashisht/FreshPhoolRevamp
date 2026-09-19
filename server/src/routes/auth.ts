@@ -47,3 +47,12 @@ authRouter.get(
     res.json(profile);
   }),
 );
+
+authRouter.delete(
+  "/account",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await auth.deleteAccount(req.user!.sub);
+    res.json({ success: true });
+  }),
+);
